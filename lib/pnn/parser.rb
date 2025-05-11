@@ -4,7 +4,7 @@ module Pnn
   # Parses PNN strings into their component parts
   class Parser
     # PNN regex capture groups for parsing
-    PATTERN = /^(?<prefix>[-+])?(?<letter>[a-zA-Z])(?<suffix>[=<>])?$/
+    PATTERN = /\A(?<prefix>[-+])?(?<letter>[a-zA-Z])(?<suffix>[=<>])?\z/
 
     # Parse a PNN string into its components
     #

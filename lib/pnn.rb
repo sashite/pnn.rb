@@ -14,8 +14,8 @@ require_relative File.join("pnn", "validator")
 module Pnn
   # Serializes a piece identifier into a PNN string.
   #
-  # @param prefix [String, nil] Optional modifier preceding the letter ('+' or '-')
   # @param letter [String] A single ASCII letter ('a-z' or 'A-Z')
+  # @param prefix [String, nil] Optional modifier preceding the letter ('+' or '-')
   # @param suffix [String, nil] Optional modifier following the letter (''')
   # @return [String] PNN notation string
   # @raise [ArgumentError] If any parameter is invalid

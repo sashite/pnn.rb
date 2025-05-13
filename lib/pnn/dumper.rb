@@ -7,7 +7,7 @@ module Pnn
     VALID_PREFIXES = ["+", "-", nil].freeze
 
     # Valid suffix modifiers
-    VALID_SUFFIXES = ["=", "<", ">", nil].freeze
+    VALID_SUFFIXES = ["'", nil].freeze
 
     # Serialize piece components into a PNN string
     #
@@ -25,9 +25,7 @@ module Pnn
 
       raise ArgumentError, "Invalid prefix: #{prefix}. Must be '+', '-', or nil." unless VALID_PREFIXES.include?(prefix)
 
-      unless VALID_SUFFIXES.include?(suffix)
-        raise ArgumentError, "Invalid suffix: #{suffix}. Must be '=', '<', '>', or nil."
-      end
+      raise ArgumentError, "Invalid suffix: #{suffix}. Must be ''', or nil." unless VALID_SUFFIXES.include?(suffix)
 
       "#{prefix}#{letter}#{suffix}"
     end

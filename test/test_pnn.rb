@@ -19,14 +19,14 @@ raise unless Pnn.valid?("+k")
 raise unless Pnn.valid?("-p")
 
 # With suffix
-raise unless Pnn.valid?("k=")
-raise unless Pnn.valid?("p<")
-raise unless Pnn.valid?("q>")
+raise unless Pnn.valid?("k'")
+raise unless Pnn.valid?("p'")
+raise unless Pnn.valid?("q'")
 
 # With both prefix and suffix
-raise unless Pnn.valid?("+k=")
-raise unless Pnn.valid?("-p<")
-raise unless Pnn.valid?("+q>")
+raise unless Pnn.valid?("+k'")
+raise unless Pnn.valid?("-p'")
+raise unless Pnn.valid?("+q'")
 
 # Invalid cases
 raise if Pnn.valid?("")
@@ -37,9 +37,17 @@ raise if Pnn.valid?("king")
 raise if Pnn.valid?("*k")
 raise if Pnn.valid?("++k")
 raise if Pnn.valid?("k^")
-raise if Pnn.valid?("k==")
-raise if Pnn.valid?("+k=<")
+raise if Pnn.valid?("k''")
+raise if Pnn.valid?("+k'=")
 raise if Pnn.valid?("+-k")
+
+# Old suffixes should now be invalid
+raise if Pnn.valid?("k=")
+raise if Pnn.valid?("k<")
+raise if Pnn.valid?("k>")
+raise if Pnn.valid?("+k=")
+raise if Pnn.valid?("-k<")
+raise if Pnn.valid?("+k>")
 
 # All 26 lowercase letters
 ("a".."z").each do |letter|
@@ -53,7 +61,7 @@ end
 
 # All valid combinations of prefixes and suffixes
 [nil, "+", "-"].each do |prefix|
-  [nil, "=", "<", ">"].each do |suffix|
+  [nil, "'"].each do |suffix|
     next if prefix.nil? && suffix.nil?
 
     pnn_string = "#{prefix}k#{suffix}"
@@ -75,12 +83,34 @@ result = Pnn.parse("+k")
 raise unless result == { letter: "k", prefix: "+" }
 
 # With suffix
-result = Pnn.parse("k=")
-raise unless result == { letter: "k", suffix: "=" }
+result = Pnn.parse("k'")
+raise unless result == { letter: "k", suffix: "'" }
 
 # With both prefix and suffix
-result = Pnn.parse("+k=")
-raise unless result == { letter: "k", prefix: "+", suffix: "=" }
+result = Pnn.parse("+k'")
+raise unless result == { letter: "k", prefix: "+", suffix: "'" }
+
+# Old suffixes should now fail
+begin
+  Pnn.parse("k=")
+  raise "Expected ArgumentError for old suffix ="
+rescue ArgumentError
+  # Expected
+end
+
+begin
+  Pnn.parse("k<")
+  raise "Expected ArgumentError for old suffix <"
+rescue ArgumentError
+  # Expected
+end
+
+begin
+  Pnn.parse("k>")
+  raise "Expected ArgumentError for old suffix >"
+rescue ArgumentError
+  # Expected
+end
 
 # Invalid strings should raise ArgumentError
 begin
@@ -121,13 +151,16 @@ raise unless Pnn.safe_parse("").nil?
 raise unless Pnn.safe_parse("kp").nil?
 raise unless Pnn.safe_parse("1").nil?
 raise unless Pnn.safe_parse("++k").nil?
+raise unless Pnn.safe_parse("k=").nil?  # Old suffix should fail
+raise unless Pnn.safe_parse("k<").nil?  # Old suffix should fail
+raise unless Pnn.safe_parse("k>").nil?  # Old suffix should fail
 
 # Safe parse should work for valid strings
 result = Pnn.safe_parse("k")
 raise unless result == { letter: "k" }
 
-result = Pnn.safe_parse("+k=")
-raise unless result == { letter: "k", prefix: "+", suffix: "=" }
+result = Pnn.safe_parse("+k'")
+raise unless result == { letter: "k", prefix: "+", suffix: "'" }
 
 # --------------------------------------------------
 # Test dump method
@@ -143,14 +176,36 @@ raise unless Pnn.dump(letter: "k", prefix: "+") == "+k"
 raise unless Pnn.dump(letter: "K", prefix: "-") == "-K"
 
 # With suffix
-raise unless Pnn.dump(letter: "k", suffix: "=") == "k="
-raise unless Pnn.dump(letter: "K", suffix: "<") == "K<"
-raise unless Pnn.dump(letter: "p", suffix: ">") == "p>"
+raise unless Pnn.dump(letter: "k", suffix: "'") == "k'"
+raise unless Pnn.dump(letter: "K", suffix: "'") == "K'"
+raise unless Pnn.dump(letter: "p", suffix: "'") == "p'"
 
 # With both prefix and suffix
-raise unless Pnn.dump(letter: "k", prefix: "+", suffix: "=") == "+k="
-raise unless Pnn.dump(letter: "K", prefix: "-", suffix: "<") == "-K<"
-raise unless Pnn.dump(letter: "p", prefix: "+", suffix: ">") == "+p>"
+raise unless Pnn.dump(letter: "k", prefix: "+", suffix: "'") == "+k'"
+raise unless Pnn.dump(letter: "K", prefix: "-", suffix: "'") == "-K'"
+raise unless Pnn.dump(letter: "p", prefix: "+", suffix: "'") == "+p'"
+
+# Old suffixes should now raise ArgumentError
+begin
+  Pnn.dump(letter: "k", suffix: "=")
+  raise "Expected ArgumentError for old suffix ="
+rescue ArgumentError
+  # Expected
+end
+
+begin
+  Pnn.dump(letter: "k", suffix: "<")
+  raise "Expected ArgumentError for old suffix <"
+rescue ArgumentError
+  # Expected
+end
+
+begin
+  Pnn.dump(letter: "k", suffix: ">")
+  raise "Expected ArgumentError for old suffix >"
+rescue ArgumentError
+  # Expected
+end
 
 # Invalid inputs should raise ArgumentError
 begin
@@ -207,12 +262,12 @@ test_cases = [
   "K",
   "+k",
   "-K",
-  "p=",
-  "q<",
-  "r>",
-  "+p=",
-  "-q<",
-  "+r>"
+  "p'",
+  "q'",
+  "r'",
+  "+p'",
+  "-q'",
+  "+r'"
 ]
 
 test_cases.each do |pnn_string|

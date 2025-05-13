@@ -40,7 +40,7 @@ A PNN record consists of a single ASCII letter that represents a piece, with opt
 Where:
 - `<letter>` is a single ASCII letter (`a-z` or `A-Z`), with uppercase representing the first player's pieces and lowercase representing the second player's pieces
 - `<prefix>` is an optional modifier preceding the letter (`+` or `-`)
-- `<suffix>` is an optional modifier following the letter (`=`, `<`, or `>`)
+- `<suffix>` is an optional modifier following the letter (`'`)
 
 ## Basic Usage
 
@@ -60,12 +60,12 @@ result = Pnn.parse("+k")
 # => { letter: "k", prefix: "+" }
 
 # With suffix
-result = Pnn.parse("k=")
-# => { letter: "k", suffix: "=" }
+result = Pnn.parse("k'")
+# => { letter: "k", suffix: "'" }
 
 # With both prefix and suffix
-result = Pnn.parse("+k=")
-# => { letter: "k", prefix: "+", suffix: "=" }
+result = Pnn.parse("+k'")
+# => { letter: "k", prefix: "+", suffix: "'" }
 ```
 
 ### Safe Parsing
@@ -76,8 +76,8 @@ Parse a PNN string without raising exceptions:
 require "pnn"
 
 # Valid PNN string
-result = Pnn.safe_parse("+k=")
-# => { letter: "k", prefix: "+", suffix: "=" }
+result = Pnn.safe_parse("+k'")
+# => { letter: "k", prefix: "+", suffix: "'" }
 
 # Invalid PNN string
 result = Pnn.safe_parse("invalid pnn string")
@@ -100,12 +100,12 @@ Pnn.dump(letter: "p", prefix: "+")
 # => "+p"
 
 # With suffix
-Pnn.dump(letter: "k", suffix: "=")
-# => "k="
+Pnn.dump(letter: "k", suffix: "'")
+# => "k'"
 
 # With both prefix and suffix
-Pnn.dump(letter: "p", prefix: "+", suffix: ">")
-# => "+p>"
+Pnn.dump(letter: "p", prefix: "+", suffix: "'")
+# => "+p'"
 ```
 
 ### Validation
@@ -117,37 +117,79 @@ require "pnn"
 
 Pnn.valid?("k")      # => true
 Pnn.valid?("+p")     # => true
-Pnn.valid?("k=")     # => true
-Pnn.valid?("+p>")    # => true
+Pnn.valid?("k'")     # => true
+Pnn.valid?("+p'")    # => true
 
 Pnn.valid?("")       # => false
 Pnn.valid?("kp")     # => false
 Pnn.valid?("++k")    # => false
-Pnn.valid?("k==")    # => false
+Pnn.valid?("k''")    # => false
 ```
 
 ### Piece Modifiers
 
-PNN supports prefixes and suffixes for pieces to denote various states or capabilities:
+PNN supports prefixes and suffixes for pieces to denote various states or capabilities. It's important to note that these modifiers are rule-agnostic - they provide a framework for representing piece states, but their specific meaning is determined by the game implementation:
 
-- **Prefix `+`**: Alternative or enhanced state
-  - Example in shogi: `+p` may represent a promoted pawn
+- **Prefix `+`**: Enhanced state
+  - Example in shogi: `+p` represents a promoted pawn with enhanced movement capabilities
+  - Example in chess variants: `+Q` might represent a queen with special powers
 
-- **Prefix `-`**: Diminished or restricted state
-  - Example: `-k` may represent a king with restricted movement
+- **Prefix `-`**: Diminished state
+  - Example in variants: `-R` might represent a rook with restricted movement abilities
+  - Example in weakened pieces: `-N` could indicate a knight that has been partially immobilized
 
-- **Suffix `=`**: Bidirectional or dual-option state
-  - Example in chess: `k=` may represent a king eligible for both kingside and queenside castling
+- **Suffix `'`**: Intermediate state
+  - Example in chess: `R'` represents a rook that can still be used for castling
+  - Example in chess: `P'` represents a pawn that can be captured en passant
+  - Example in variants: `B'` might indicate a bishop with a special one-time ability
 
-- **Suffix `<`**: Left-side constraint or condition
-  - Example in chess: `k<` may represent a king eligible for queenside castling only
-  - Example in chess: `p<` may represent a pawn that may be captured _en passant_ from the left
+These modifiers have no intrinsic semantics in the PNN specification itself. They merely provide a flexible framework for representing piece-specific conditions or states while maintaining PNN's rule-agnostic nature. Game implementations are responsible for interpreting these modifiers according to their specific rules.
 
-- **Suffix `>`**: Right-side constraint or condition
-  - Example in chess: `k>` may represent a king eligible for kingside castling only
-  - Example in chess: `p>` may represent a pawn that may be captured en passant from the right
+## Examples of PNN in Common Games
 
-These modifiers have no defined semantics in the PNN specification itself but provide a flexible framework for representing piece-specific conditions while maintaining PNN's rule-agnostic nature.
+The following examples demonstrate how PNN might be used in familiar games. Remember that PNN itself defines only the notation format, not the game-specific interpretations.
+
+### Chess Examples
+
+In the context of chess:
+
+```
+K       # King (first player)
+k       # King (second player)
+Q       # Queen (first player)
+R '      # Rook that has not moved yet and can be used for castling
+P'      # Pawn that can be captured en passant
+```
+
+### Shogi Examples
+
+In the context of shogi:
+
+```
+K       # King (first player)
+k       # King (second player)
++P      # Promoted pawn (tokin)
++L      # Promoted lance (narikyou)
+```
+
+### Example: A Complete Chess Position with PNN
+
+A chess position might contain a mix of standard and modified pieces. Here's an example after the moves 1. e4 c5 2. e5 d5:
+
+```
+r' n  b  q  k  b  n  r'    # Eighth rank with unmoved rooks (castling rights)
+p  p  .  .  p  p  p  p     # Seventh rank pawns (d and c pawns have moved)
+.  .  .  .  .  .  .  .     # Empty sixth rank
+.  .  p  p' P  .  .  .     # Fifth rank with pawn that can be captured en passant (d5) and other pawns
+.  .  .  .  .  .  .  .     # Empty fourth rank
+.  .  .  .  .  .  .  .     # Empty third rank
+P  P  P  P  .  P  P  P     # Second rank pawns (e pawn has moved)
+R' N  B  Q  K  B  N  R'    # First rank with unmoved rooks (castling rights)
+```
+
+In this position, White could capture Black's queen pawn (d5) en passant with the e5 pawn moving to d6.
+
+Note: The above representation is merely illustrative; PNN itself only defines the notation for individual pieces, not complete board states.
 
 ## Properties of PNN
 
@@ -173,4 +215,4 @@ The [gem](https://rubygems.org/gems/pnn) is available as open source under the t
 
 ## About Sashité
 
-This project is maintained by [Sashité](https://sashite.com/) - a project dedicated to promoting chess variants and sharing the beauty of Chinese, Japanese, and Western chess cultures.
+This project is maintained by [Sashité](https://sashite.com/) — promoting chess variants and sharing the beauty of Chinese, Japanese, and Western chess cultures.

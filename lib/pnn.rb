@@ -16,12 +16,12 @@ module Pnn
   #
   # @param prefix [String, nil] Optional modifier preceding the letter ('+' or '-')
   # @param letter [String] A single ASCII letter ('a-z' or 'A-Z')
-  # @param suffix [String, nil] Optional modifier following the letter ('=', '<', or '>')
+  # @param suffix [String, nil] Optional modifier following the letter (''')
   # @return [String] PNN notation string
   # @raise [ArgumentError] If any parameter is invalid
   # @example
-  #   Pnn.dump(letter: "k", suffix: "=")
-  #   # => "k="
+  #   Pnn.dump(letter: "k", suffix: "'")
+  #   # => "k'"
   def self.dump(letter:, prefix: nil, suffix: nil)
     Dumper.dump(letter:, prefix:, suffix:)
   end
@@ -35,8 +35,8 @@ module Pnn
   #   - :suffix [String, nil] - The suffix modifier if present
   # @raise [ArgumentError] If the PNN string is invalid
   # @example
-  #   Pnn.parse("+k=")
-  #   # => { letter: "k", prefix: "+", suffix: "=" }
+  #   Pnn.parse("+k'")
+  #   # => { letter: "k", prefix: "+", suffix: "'" }
   def self.parse(pnn_string)
     Parser.parse(pnn_string)
   end
@@ -47,8 +47,8 @@ module Pnn
   # @return [Hash, nil] Hash containing the parsed piece data or nil if parsing fails
   # @example
   #   # Valid PNN string
-  #   Pnn.safe_parse("+k=")
-  #   # => { letter: "k", prefix: "+", suffix: "=" }
+  #   Pnn.safe_parse("+k'")
+  #   # => { letter: "k", prefix: "+", suffix: "'" }
   #
   #   # Invalid PNN string
   #   Pnn.safe_parse("invalid")
@@ -62,7 +62,7 @@ module Pnn
   # @param pnn_string [String] PNN string to validate
   # @return [Boolean] True if the string is a valid PNN string
   # @example
-  #   Pnn.valid?("k=") # => true
+  #   Pnn.valid?("k'") # => true
   #   Pnn.valid?("invalid") # => false
   def self.valid?(pnn_string)
     Validator.valid?(pnn_string)

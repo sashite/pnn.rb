@@ -18,12 +18,12 @@ result = Pnn::Parser.parse("+k")
 raise "Expected {letter: 'k', prefix: '+'}, got #{result}" unless result == { letter: "k", prefix: "+" }
 
 # Letter with suffix
-result = Pnn::Parser.parse("k=")
-raise "Expected {letter: 'k', suffix: '='}, got #{result}" unless result == { letter: "k", suffix: "=" }
+result = Pnn::Parser.parse("k'")
+raise "Expected {letter: 'k', suffix: '''}, got #{result}" unless result == { letter: "k", suffix: "'" }
 
 # Letter with both prefix and suffix
-result = Pnn::Parser.parse("+k=")
-expected = { letter: "k", prefix: "+", suffix: "=" }
+result = Pnn::Parser.parse("+k'")
+expected = { letter: "k", prefix: "+", suffix: "'" }
 raise "Expected #{expected}, got #{result}" unless result == expected
 
 # Uppercase letter
@@ -31,8 +31,8 @@ result = Pnn::Parser.parse("K")
 raise "Expected {letter: 'K'}, got #{result}" unless result == { letter: "K" }
 
 # Uppercase letter with modifiers
-result = Pnn::Parser.parse("-K>")
-expected = { letter: "K", prefix: "-", suffix: ">" }
+result = Pnn::Parser.parse("-K'")
+expected = { letter: "K", prefix: "-", suffix: "'" }
 raise "Expected #{expected}, got #{result}" unless result == expected
 
 # --------------------------------------------------
@@ -48,7 +48,7 @@ puts "Testing all valid prefix and suffix combinations..."
 end
 
 # All valid suffix options
-["=", "<", ">"].each do |suffix|
+["'"].each do |suffix|
   result = Pnn::Parser.parse("k#{suffix}")
   expected = { letter: "k", suffix: suffix }
   raise "Expected #{expected}, got #{result}" unless result == expected
@@ -56,11 +56,19 @@ end
 
 # All combinations of prefixes and suffixes
 ["+", "-"].each do |prefix|
-  ["=", "<", ">"].each do |suffix|
+  ["'"].each do |suffix|
     result = Pnn::Parser.parse("#{prefix}k#{suffix}")
     expected = { letter: "k", prefix: prefix, suffix: suffix }
     raise "Expected #{expected}, got #{result}" unless result == expected
   end
+end
+
+# Test old suffixes are now invalid
+["=", "<", ">"].each do |invalid_suffix|
+  Pnn::Parser.parse("k#{invalid_suffix}")
+  raise "Expected ArgumentError for invalid suffix: '#{invalid_suffix}'"
+rescue ArgumentError
+  # Expected
 end
 
 # --------------------------------------------------
@@ -140,7 +148,7 @@ rescue ArgumentError
 end
 
 begin
-  Pnn::Parser.parse("k==")
+  Pnn::Parser.parse("k''")
   raise "Expected ArgumentError for multiple suffixes"
 rescue ArgumentError
   # Expected
@@ -148,7 +156,7 @@ end
 
 # Too many modifiers
 begin
-  Pnn::Parser.parse("+k=<")
+  Pnn::Parser.parse("+k'=")
   raise "Expected ArgumentError for too many modifiers"
 rescue ArgumentError
   # Expected
@@ -170,8 +178,8 @@ puts "Testing non-string input coercion..."
 result = Pnn::Parser.parse(:k)
 raise "Expected {letter: 'k'}, got #{result}" unless result == { letter: "k" }
 
-result = Pnn::Parser.parse(:"+k=")
-expected = { letter: "k", prefix: "+", suffix: "=" }
+result = Pnn::Parser.parse(:"+k'")
+expected = { letter: "k", prefix: "+", suffix: "'" }
 raise "Expected #{expected}, got #{result}" unless result == expected
 
 # --------------------------------------------------
@@ -180,7 +188,7 @@ raise "Expected #{expected}, got #{result}" unless result == expected
 puts "Testing safe_parse..."
 
 # Valid inputs should return the same as parse
-valid_inputs = ["k", "+k", "k=", "+k=", "K", "-K>"]
+valid_inputs = ["k", "+k", "k'", "+k'", "K", "-K'"]
 valid_inputs.each do |input|
   normal_result = Pnn::Parser.parse(input)
   safe_result = Pnn::Parser.safe_parse(input)
@@ -188,7 +196,7 @@ valid_inputs.each do |input|
 end
 
 # Invalid inputs should return nil instead of raising errors
-invalid_inputs = ["", "kp", "1", "*k", "k*", "++k", "k==", "+k=<", "+-k"]
+invalid_inputs = ["", "kp", "1", "*k", "k*", "++k", "k''", "+k'=", "+-k", "k=", "k<", "k>"]
 invalid_inputs.each do |input|
   result = Pnn::Parser.safe_parse(input)
   raise "Expected nil for invalid input '#{input}', got #{result}" unless result.nil?

@@ -22,20 +22,28 @@ raise unless Pnn::Validator.valid?("+A")
 raise unless Pnn::Validator.valid?("-Z")
 
 # With suffix
-raise unless Pnn::Validator.valid?("k=")
-raise unless Pnn::Validator.valid?("p<")
-raise unless Pnn::Validator.valid?("q>")
-raise unless Pnn::Validator.valid?("Z=")
-raise unless Pnn::Validator.valid?("A<")
-raise unless Pnn::Validator.valid?("B>")
+raise unless Pnn::Validator.valid?("k'")
+raise unless Pnn::Validator.valid?("p'")
+raise unless Pnn::Validator.valid?("q'")
+raise unless Pnn::Validator.valid?("Z'")
+raise unless Pnn::Validator.valid?("A'")
+raise unless Pnn::Validator.valid?("B'")
 
 # With both prefix and suffix
-raise unless Pnn::Validator.valid?("+k=")
-raise unless Pnn::Validator.valid?("-p<")
-raise unless Pnn::Validator.valid?("+q>")
-raise unless Pnn::Validator.valid?("-Z=")
-raise unless Pnn::Validator.valid?("+A<")
-raise unless Pnn::Validator.valid?("-B>")
+raise unless Pnn::Validator.valid?("+k'")
+raise unless Pnn::Validator.valid?("-p'")
+raise unless Pnn::Validator.valid?("+q'")
+raise unless Pnn::Validator.valid?("-Z'")
+raise unless Pnn::Validator.valid?("+A'")
+raise unless Pnn::Validator.valid?("-B'")
+
+# Old suffixes should now be invalid
+raise if Pnn::Validator.valid?("k=")
+raise if Pnn::Validator.valid?("k<")
+raise if Pnn::Validator.valid?("k>")
+raise if Pnn::Validator.valid?("+k=")
+raise if Pnn::Validator.valid?("-k<")
+raise if Pnn::Validator.valid?("+k>")
 
 # --------------------------------------------------
 # Test invalid strings
@@ -65,16 +73,19 @@ raise if Pnn::Validator.valid?(">k")
 
 # Invalid suffixes
 raise if Pnn::Validator.valid?("k*")
-raise if Pnn::Validator.valid?("k==")
+raise if Pnn::Validator.valid?("k''")
 raise if Pnn::Validator.valid?("k+")
 raise if Pnn::Validator.valid?("k-")
+raise if Pnn::Validator.valid?("k=")  # Old suffix
+raise if Pnn::Validator.valid?("k<")  # Old suffix
+raise if Pnn::Validator.valid?("k>")  # Old suffix
 
 # Invalid combinations
-raise if Pnn::Validator.valid?("+k=<")
+raise if Pnn::Validator.valid?("+k'=")
 raise if Pnn::Validator.valid?("+-k")
-raise if Pnn::Validator.valid?("k=<")
-raise if Pnn::Validator.valid?("++k=")
-raise if Pnn::Validator.valid?("+k==")
+raise if Pnn::Validator.valid?("k'<")
+raise if Pnn::Validator.valid?("++k'")
+raise if Pnn::Validator.valid?("+k''")
 
 # --------------------------------------------------
 # Test all valid letters
@@ -98,7 +109,7 @@ puts "Testing all valid modifier combinations..."
 
 # Test every valid combination of prefixes and suffixes
 [nil, "+", "-"].each do |prefix|
-  [nil, "=", "<", ">"].each do |suffix|
+  [nil, "'"].each do |suffix|
     next if prefix.nil? && suffix.nil?
 
     pnn_string = "#{prefix}k#{suffix}"
@@ -114,8 +125,13 @@ puts "Testing input type coercion..."
 # Symbol input
 raise unless Pnn::Validator.valid?(:k)
 raise unless Pnn::Validator.valid?(:"+k")
-raise unless Pnn::Validator.valid?(:"-p<")
-raise unless Pnn::Validator.valid?(:"+q>")
+raise unless Pnn::Validator.valid?(:"-p'")
+raise unless Pnn::Validator.valid?(:"+q'")
+
+# Symbol input with old suffixes should be invalid
+raise if Pnn::Validator.valid?(:"-p<")
+raise if Pnn::Validator.valid?(:"+q>")
+raise if Pnn::Validator.valid?(:"+k=")
 
 # --------------------------------------------------
 # Test edge cases
@@ -134,7 +150,7 @@ end
 raise if Pnn::Validator.valid?(" k")
 raise if Pnn::Validator.valid?("k ")
 raise if Pnn::Validator.valid?("+ k")
-raise if Pnn::Validator.valid?("k =")
+raise if Pnn::Validator.valid?("k '")
 
 # Strings with newlines or tabs
 raise if Pnn::Validator.valid?("\nk")

@@ -4,7 +4,7 @@ module Pnn
   # Validates PNN strings according to the specification
   class Validator
     # PNN validation pattern matching the JSON schema pattern in the spec
-    PATTERN = /\A[-+]?[a-zA-Z][=<>]?\z/
+    PATTERN = /\A[-+]?[a-zA-Z][']?\z/
 
     # Class method to validate PNN strings
     #

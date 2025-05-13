@@ -18,20 +18,20 @@ result = Pnn::Dumper.dump(letter: "p", prefix: "+")
 raise "Expected '+p', got '#{result}'" unless result == "+p"
 
 # Simple letter with suffix
-result = Pnn::Dumper.dump(letter: "q", suffix: "=")
-raise "Expected 'q=', got '#{result}'" unless result == "q="
+result = Pnn::Dumper.dump(letter: "q", suffix: "'")
+raise "Expected 'q'', got '#{result}'" unless result == "q'"
 
 # Letter with both prefix and suffix
-result = Pnn::Dumper.dump(letter: "r", prefix: "-", suffix: ">")
-raise "Expected '-r>', got '#{result}'" unless result == "-r>"
+result = Pnn::Dumper.dump(letter: "r", prefix: "-", suffix: "'")
+raise "Expected '-r'', got '#{result}'" unless result == "-r'"
 
 # Uppercase letter
 result = Pnn::Dumper.dump(letter: "K")
 raise "Expected 'K', got '#{result}'" unless result == "K"
 
 # Uppercase letter with modifiers
-result = Pnn::Dumper.dump(letter: "R", prefix: "+", suffix: "<")
-raise "Expected '+R<', got '#{result}'" unless result == "+R<"
+result = Pnn::Dumper.dump(letter: "R", prefix: "+", suffix: "'")
+raise "Expected '+R'', got '#{result}'" unless result == "+R'"
 
 # --------------------------------------------------
 # Test with all valid modifiers
@@ -46,7 +46,7 @@ puts "Testing with all valid modifiers..."
 end
 
 # Test all valid suffixes
-["=", "<", ">", nil].each do |suffix|
+["'", nil].each do |suffix|
   result = Pnn::Dumper.dump(letter: "k", suffix: suffix)
   expected = suffix.nil? ? "k" : "k#{suffix}"
   raise "Expected '#{expected}', got '#{result}'" unless result == expected
@@ -54,11 +54,19 @@ end
 
 # All possible combinations of valid prefixes and suffixes
 [nil, "+", "-"].each do |prefix|
-  [nil, "=", "<", ">"].each do |suffix|
+  [nil, "'"].each do |suffix|
     result = Pnn::Dumper.dump(letter: "k", prefix: prefix, suffix: suffix)
     expected = "#{prefix}k#{suffix}"
     raise "Expected '#{expected}', got '#{result}'" unless result == expected
   end
+end
+
+# Test old suffixes are now invalid
+["=", "<", ">"].each do |invalid_suffix|
+  Pnn::Dumper.dump(letter: "k", suffix: invalid_suffix)
+  raise "Expected ArgumentError for invalid suffix: '#{invalid_suffix}'"
+rescue ArgumentError
+  # Expected
 end
 
 # --------------------------------------------------
@@ -83,7 +91,7 @@ rescue ArgumentError
 end
 
 # Invalid suffixes
-["*", "==", "a", "1", " "].each do |invalid_suffix|
+["*", "''", "a", "1", " ", "=", "<", ">"].each do |invalid_suffix|
   Pnn::Dumper.dump(letter: "k", suffix: invalid_suffix)
   raise "Expected ArgumentError for invalid suffix: '#{invalid_suffix}'"
 rescue ArgumentError

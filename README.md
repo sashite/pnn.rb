@@ -157,7 +157,7 @@ In the context of chess:
 K       # King (first player)
 k       # King (second player)
 Q       # Queen (first player)
-R '      # Rook that has not moved yet and can be used for castling
+R'      # Rook that has not moved yet and can be used for castling
 P'      # Pawn that can be captured en passant
 ```
 

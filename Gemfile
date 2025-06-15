@@ -7,6 +7,7 @@ gemspec
 gem "bundler"
 gem "byebug"
 gem "rake"
+gem "rdoc"
 gem "rubocop"
 gem "rubocop-gitlab-security"
 gem "rubocop-md"

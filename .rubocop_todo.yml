@@ -5,12 +5,3 @@
 # one by one as the offenses are removed from the code base.
 # Note that changes in the inspected code, or installation of new
 # versions of RuboCop, may require this file to be generated again.
-
-# Offense count: 4
-# Configuration parameters: MinSize.
-Performance/CollectionLiteralInLoop:
-  Exclude:
-    - 'test/pnn/test_dumper.rb'
-    - 'test/pnn/test_parser.rb'
-    - 'test/pnn/test_validator.rb'
-    - 'test/test_pnn.rb'

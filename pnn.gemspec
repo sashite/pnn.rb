@@ -5,11 +5,13 @@ Gem::Specification.new do |spec|
   spec.version                = ::File.read("VERSION.semver").chomp
   spec.author                 = "Cyril Kato"
   spec.email                  = "contact@cyril.email"
-  spec.summary                = "PNN (Piece Name Notation) support for the Ruby language."
-  spec.description            = "A Ruby interface for serialization and deserialization of piece identifiers in PNN format. " \
-                                "PNN is a consistent and rule-agnostic format for representing pieces in abstract strategy " \
-                                "board games, providing a standardized way to identify pieces independent of any specific " \
-                                "game rules or mechanics."
+  spec.summary                = "Modern Ruby implementation of Piece Name Notation (PNN) for abstract strategy games."
+  spec.description            = "A clean, immutable Ruby interface for working with piece identifiers in PNN format. " \
+                                "PNN provides a consistent and rule-agnostic notation for representing pieces in " \
+                                "abstract strategy board games like chess, shogi, and xiangqi. Features include " \
+                                "state modifiers for enhanced/diminished/intermediate pieces, ownership changes, " \
+                                "and comprehensive validation. Perfect for game engines, analysis tools, and " \
+                                "educational applications."
   spec.homepage               = "https://github.com/sashite/pnn.rb"
   spec.license                = "MIT"
   spec.files                  = ::Dir["LICENSE.md", "README.md", "lib/**/*"]

@@ -1,70 +1,67 @@
 # frozen_string_literal: true
 
-require_relative File.join("pnn", "dumper")
-require_relative File.join("pnn", "parser")
-require_relative File.join("pnn", "validator")
+require_relative File.join("pnn", "piece")
 
-# This module provides a Ruby interface for serialization and
-# deserialization of piece identifiers in PNN format.
+# This module provides a Ruby interface for working with piece identifiers
+# in PNN (Piece Name Notation) format.
 #
-# PNN (Piece Name Notation) defines a consistent and rule-agnostic
-# format for representing pieces in abstract strategy board games.
+# PNN defines a consistent and rule-agnostic format for representing pieces
+# in abstract strategy board games, providing a standardized way to identify
+# pieces independent of any specific game rules or mechanics.
+#
+# The primary interface is the `Pnn::Piece` class, which provides an
+# object-oriented API for creating, parsing, and manipulating piece representations.
+#
+# @example Basic usage with the Piece class
+#   # Parse a PNN string
+#   piece = Pnn::Piece.parse("k")
+#
+#   # Create directly
+#   piece = Pnn::Piece.new("k")
+#
+#   # Manipulate states
+#   enhanced = piece.enhance
+#   enhanced.to_s  # => "+k"
+#
+#   # Change ownership
+#   flipped = piece.flip
+#   flipped.to_s  # => "K"
 #
 # @see https://sashite.dev/documents/pnn/1.0.0/
+# @see Pnn::Piece
 module Pnn
-  # Serializes a piece identifier into a PNN string.
-  #
-  # @param letter [String] A single ASCII letter ('a-z' or 'A-Z')
-  # @param prefix [String, nil] Optional modifier preceding the letter ('+' or '-')
-  # @param suffix [String, nil] Optional modifier following the letter (''')
-  # @return [String] PNN notation string
-  # @raise [ArgumentError] If any parameter is invalid
-  # @example
-  #   Pnn.dump(letter: "k", suffix: "'")
-  #   # => "k'"
-  def self.dump(letter:, prefix: nil, suffix: nil)
-    Dumper.dump(letter:, prefix:, suffix:)
-  end
-
-  # Parses a PNN string into its component parts.
-  #
-  # @param pnn_string [String] PNN notation string
-  # @return [Hash] Hash containing the parsed piece data with the following keys:
-  #   - :letter [String] - The base letter identifier
-  #   - :prefix [String, nil] - The prefix modifier if present
-  #   - :suffix [String, nil] - The suffix modifier if present
-  # @raise [ArgumentError] If the PNN string is invalid
-  # @example
-  #   Pnn.parse("+k'")
-  #   # => { letter: "k", prefix: "+", suffix: "'" }
-  def self.parse(pnn_string)
-    Parser.parse(pnn_string)
-  end
-
-  # Safely parses a PNN string into its component parts without raising exceptions.
-  #
-  # @param pnn_string [String] PNN notation string
-  # @return [Hash, nil] Hash containing the parsed piece data or nil if parsing fails
-  # @example
-  #   # Valid PNN string
-  #   Pnn.safe_parse("+k'")
-  #   # => { letter: "k", prefix: "+", suffix: "'" }
-  #
-  #   # Invalid PNN string
-  #   Pnn.safe_parse("invalid")
-  #   # => nil
-  def self.safe_parse(pnn_string)
-    Parser.safe_parse(pnn_string)
-  end
-
-  # Validates if the given string is a valid PNN string
+  # Validate if the given string is a valid PNN string.
   #
   # @param pnn_string [String] PNN string to validate
   # @return [Boolean] True if the string is a valid PNN string
   # @example
-  #   Pnn.valid?("k'") # => true
+  #   Pnn.valid?("k'")     # => true
   #   Pnn.valid?("invalid") # => false
   def self.valid?(pnn_string)
-    Validator.valid?(pnn_string)
+    Piece.parse(pnn_string).to_s == pnn_string
+  rescue ArgumentError
+    false
+  end
+
+  # Create a new piece instance.
+  #
+  # This is a convenience method that delegates to `Pnn::Piece.new`.
+  #
+  # @param letter [String] single ASCII letter (a-z or A-Z)
+  # @param enhanced [Boolean] whether the piece has enhanced state
+  # @param diminished [Boolean] whether the piece has diminished state
+  # @param intermediate [Boolean] whether the piece has intermediate state
+  # @return [Pnn::Piece] new piece instance
+  # @raise [ArgumentError] if parameters are invalid
+  # @example
+  #   piece = Pnn.piece("k", enhanced: true)
+  #   piece.to_s  # => "+k"
+  def self.piece(letter, enhanced: false, diminished: false, intermediate: false)
+    Piece.new(
+      letter,
+      enhanced:,
+      diminished:,
+      intermediate:
+    )
   end
 end

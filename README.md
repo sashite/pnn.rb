@@ -9,9 +9,9 @@
 
 ## What is SNN?
 
-SNN (Style Name Notation) is a consistent and rule-agnostic format for identifying piece styles in abstract strategy board games. It provides unambiguous identification of piece styles by using standardized naming conventions, enabling clear distinction between different piece traditions, variants, or design approaches within multi-style gaming environments.
+SNN (Style Name Notation) is a rule-agnostic format for identifying piece styles in abstract strategy board games, as defined in the [Game Protocol](https://sashite.dev/game-protocol/). It provides unambiguous identification of piece styles using standardized naming conventions with case-based player assignment, enabling clear distinction between different piece traditions in multi-style gaming environments.
 
-This gem implements the [SNN Specification v1.0.0](https://sashite.dev/documents/snn/1.0.0/), providing a Ruby interface for working with style identifiers through a clean and minimal API.
+This gem implements the [SNN Specification v1.0.0](https://sashite.dev/specs/snn/1.0.0/), providing a Ruby interface for working with style identifiers through a clean and minimal API.
 
 ## Installation
 
@@ -28,18 +28,44 @@ gem install sashite-snn
 
 ## SNN Format
 
-A SNN record consists of an identifier starting with an alphabetic character, followed by optional alphabetic characters and digits:
+A SNN record consists of a style identifier that maps to the **Style attribute** from the [Game Protocol](https://sashite.dev/game-protocol/):
 
 ```
-<style-id>
+<style-identifier>
 ```
 
-Where:
-- The identifier starts with an alphabetic character (`A-Z` for uppercase, `a-z` for lowercase)
-- Subsequent characters may include alphabetic characters and digits (`A-Z`, `0-9` for uppercase styles; `a-z`, `0-9` for lowercase styles)
-- **Uppercase** format denotes styles belonging to the first player
-- **Lowercase** format denotes styles belonging to the second player
-- The entire identifier must be entirely uppercase or entirely lowercase
+### Grammar Specification
+
+```bnf
+<snn> ::= <uppercase-style> | <lowercase-style>
+
+<uppercase-style> ::= <letter-uppercase> <identifier-tail-uppercase>*
+<lowercase-style> ::= <letter-lowercase> <identifier-tail-lowercase>*
+
+<identifier-tail-uppercase> ::= <letter-uppercase> | <digit>
+<identifier-tail-lowercase> ::= <letter-lowercase> | <digit>
+
+<letter-uppercase> ::= "A" | "B" | "C" | ... | "Z"
+<letter-lowercase> ::= "a" | "b" | "c" | ... | "z"
+<digit> ::= "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
+```
+
+### Protocol Mapping
+
+SNN encodes style information with player association according to the Game Protocol:
+
+| Protocol Attribute | SNN Encoding | Examples |
+|-------------------|--------------|----------|
+| **Style** | Alphanumeric identifier | `CHESS`, `SHOGI`, `XIANGQI` |
+| **Player Association** | Case encoding | `CHESS` = First player, `chess` = Second player |
+
+### Format Rules
+
+- **Start character**: Must be alphabetic (`A-Z` for first player, `a-z` for second player)
+- **Subsequent characters**: Alphabetic characters and digits only
+- **Case consistency**: Entire identifier must be uppercase or lowercase (no mixed case)
+- **Player assignment**: Uppercase = first player, lowercase = second player
+- **Fixed assignment**: Player-style association remains constant throughout the match
 
 ## Basic Usage
 
@@ -91,16 +117,16 @@ end
 
 ### Player Association
 
-Check which player a style belongs to:
+Check which player a style belongs to according to the Game Protocol:
 
 ```ruby
 first_player_style = Sashite::Snn::Style.parse("CHESS")
-first_player_style.first_player?  # => true
+first_player_style.first_player?  # => true (uppercase = first player)
 first_player_style.second_player? # => false
 
 second_player_style = Sashite::Snn::Style.parse("shogi")
 second_player_style.first_player?  # => false
-second_player_style.second_player? # => true
+second_player_style.second_player? # => true (lowercase = second player)
 ```
 
 ## Validation
@@ -109,21 +135,21 @@ All parsing automatically validates input according to the SNN specification:
 
 ```ruby
 # Valid SNN strings
-Sashite::Snn::Style.parse("CHESS")      # ✓
-Sashite::Snn::Style.parse("shogi")      # ✓
-Sashite::Snn::Style.parse("CHESS960")   # ✓
-Sashite::Snn::Style.parse("makruk")     # ✓
+Sashite::Snn::Style.parse("CHESS")      # ✓ First player chess
+Sashite::Snn::Style.parse("shogi")      # ✓ Second player shogi
+Sashite::Snn::Style.parse("CHESS960")   # ✓ First player Chess960 variant
+Sashite::Snn::Style.parse("makruk")     # ✓ Second player makruk
 
 # Valid constructor calls
-Sashite::Snn::Style.new("XIANGQI")      # ✓
-Sashite::Snn::Style.new("janggi")       # ✓
+Sashite::Snn::Style.new("XIANGQI")      # ✓ First player xiangqi
+Sashite::Snn::Style.new("janggi")       # ✓ Second player janggi
 
 # Convenience method
-Sashite::Snn.style("MINISHOGI") # ✓
+Sashite::Snn.style("MINISHOGI") # ✓ First player minishogi
 
 # Check validity
 Sashite::Snn.valid?("CHESS")    # => true
-Sashite::Snn.valid?("Chess")    # => false (mixed case)
+Sashite::Snn.valid?("Chess")    # => false (mixed case not allowed)
 Sashite::Snn.valid?("123")      # => false (must start with letter)
 Sashite::Snn.valid?("")         # => false (empty string)
 
@@ -139,9 +165,9 @@ Sashite::Snn::Style.parse("CHESS-960")  # ✗ ArgumentError (contains hyphen)
 ### Classic Game Styles
 
 ```ruby
-# International Chess
-first_player = Sashite::Snn::Style.parse("CHESS")   # First player uses chess pieces
-second_player = Sashite::Snn::Style.parse("chess")  # Second player uses chess pieces
+# Traditional chess match (both players use chess pieces)
+first_player = Sashite::Snn::Style.parse("CHESS")   # First player
+second_player = Sashite::Snn::Style.parse("chess")  # Second player
 
 # Cross-style game: Chess vs Shogi
 first_player = Sashite::Snn::Style.parse("CHESS")   # First player uses chess pieces
@@ -150,6 +176,31 @@ second_player = Sashite::Snn::Style.parse("shogi")  # Second player uses shogi p
 # Variant games
 first_player = Sashite::Snn::Style.parse("CHESS960") # First player uses Chess960 variant
 second_player = Sashite::Snn::Style.parse("chess960") # Second player uses Chess960 variant
+```
+
+### Style Examples from SNN Specification
+
+According to the [SNN Examples Documentation](https://sashite.dev/specs/snn/1.0.0/examples/):
+
+| SNN | Interpretation |
+|-----|----------------|
+| `CHESS` | Chess first player (white) |
+| `chess` | Chess second player (black) |
+| `SHOGI` | Shōgi first player (sente) |
+| `shogi` | Shōgi second player (gote) |
+| `XIANGQI` | Xiangqi first player (red) |
+| `xiangqi` | Xiangqi second player (black) |
+
+```ruby
+# Standard game representations
+chess_white = Sashite::Snn::Style.parse("CHESS")    # White pieces (first player)
+chess_black = Sashite::Snn::Style.parse("chess")    # Black pieces (second player)
+
+shogi_sente = Sashite::Snn::Style.parse("SHOGI")    # Sente (first player)
+shogi_gote = Sashite::Snn::Style.parse("shogi")     # Gote (second player)
+
+xiangqi_red = Sashite::Snn::Style.parse("XIANGQI")  # Red pieces (first player)
+xiangqi_black = Sashite::Snn::Style.parse("xiangqi") # Black pieces (second player)
 ```
 
 ### Variant Styles
@@ -210,31 +261,33 @@ style_configs = {
 #### Player Queries
 - `#first_player?` - Check if style belongs to first player (uppercase)
 - `#second_player?` - Check if style belongs to second player (lowercase)
-- `#uppercase?` - Alias for `#first_player?`
-- `#lowercase?` - Alias for `#second_player?`
+- `#uppercase?` - Check if identifier is uppercase
+- `#lowercase?` - Check if identifier is lowercase
 
 #### Conversion
 - `#to_s` - Convert to SNN string representation
 - `#to_sym` - Convert to symbol representation
 - `#inspect` - Detailed string representation for debugging
 
-## Properties of SNN
+## Design Properties
 
-* **Rule-agnostic**: SNN does not encode game states, legality, validity, or game-specific conditions
-* **Unambiguous identification**: Different piece styles can coexist without naming conflicts
-* **Canonical representation**: Equivalent styles yield identical strings
-* **Cross-style support**: Enables games where players use different piece traditions
-* **Case consistency**: Each identifier is entirely uppercase or entirely lowercase
-* **Fixed assignment**: Style assignment to players remains constant throughout a game
+Following the SNN specification, this implementation provides:
 
-## Constraints
+- **Rule-agnostic**: Independent of specific game mechanics
+- **Unambiguous identification**: Clear distinction between different piece traditions
+- **Cross-style support**: Enables multi-tradition gaming environments
+- **Canonical representation**: Consistent naming for equivalent styles
+- **Player clarity**: Case-based player association throughout gameplay
+
+## System Constraints
 
 * SNN supports exactly **two players**
 * Players are distinguished by casing: **uppercase** for first player, **lowercase** for second player
 * Style identifiers must start with an alphabetic character
-* Subsequent characters may include alphabetic characters and digits
+* Subsequent characters may include alphabetic characters and digits only
 * Mixed casing is not permitted within a single identifier
 * Style assignment to players remains **fixed throughout a game**
+* Total piece count must remain constant (Game Protocol conservation principle)
 
 ## Use Cases
 
@@ -247,15 +300,27 @@ SNN is particularly useful in the following scenarios:
 5. **Cross-tradition analysis**: When comparing or analyzing strategic elements across different piece traditions
 6. **Tournament systems**: When organizing events that allow players to choose from different piece style traditions
 
+## Game Protocol Compliance
+
+This implementation fully complies with the [Game Protocol](https://sashite.dev/game-protocol/) by:
+
+- Representing the **Style attribute** of pieces
+- Supporting **two-player** constraint
+- Maintaining **piece conservation** (styles are immutable)
+- Enabling **cross-style** gameplay scenarios
+- Providing **deterministic** style identification
+
 ## Documentation
 
-- [Official SNN Specification](https://sashite.dev/documents/snn/1.0.0/)
+- [Official SNN Specification v1.0.0](https://sashite.dev/specs/snn/1.0.0/)
+- [SNN Examples Documentation](https://sashite.dev/specs/snn/1.0.0/examples/)
+- [Game Protocol Foundation](https://sashite.dev/game-protocol/)
 - [API Documentation](https://rubydoc.info/github/sashite/snn.rb/main)
 
 ## License
 
-The [gem](https://rubygems.org/gems/sashite-snn) is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
+Available as open source under the [MIT License](https://opensource.org/licenses/MIT).
 
-## About Sashité
+## About
 
-This project is maintained by [Sashité](https://sashite.com/) — promoting chess variants and sharing the beauty of Chinese, Japanese, and Western chess cultures.
+Maintained by [Sashité](https://sashite.com/) — promoting chess variants and sharing the beauty of board game cultures.

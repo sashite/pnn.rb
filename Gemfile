@@ -5,7 +5,7 @@ source "https://rubygems.org"
 gemspec
 
 gem "bundler"
-gem "byebug"
+gem "debug"
 gem "rake"
 gem "rdoc"
 gem "rubocop"

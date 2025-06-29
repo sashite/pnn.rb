@@ -20,11 +20,9 @@ AllCops:
   
     - lib/.DS_Store
   
-    - lib/pnn/.DS_Store
+    - lib/sashite/pnn/.DS_Store
   
     - pkg/
-  
-    - test/.DS_Store
   
     - tmp/
   

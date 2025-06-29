@@ -9,59 +9,66 @@
 
 ## What is PNN?
 
-PNN (Piece Name Notation) is a consistent and rule-agnostic format for representing pieces in abstract strategy board games. It defines a standardized way to identify and represent pieces independent of any specific game rules or mechanics.
+PNN (Piece Name Notation) extends [PIN (Piece Identifier Notation)](https://sashite.dev/specs/pin/1.0.0/) to provide style-aware piece representation in abstract strategy board games. It adds a derivation marker that distinguishes pieces by their style origin, enabling cross-style game scenarios and piece origin tracking.
 
-This gem implements the [PNN Specification v1.0.0](https://sashite.dev/documents/pnn/1.0.0/), providing a Ruby interface for working with piece representations through an intuitive object-oriented API.
+This gem implements the [PNN Specification v1.0.0](https://sashite.dev/specs/pnn/1.0.0/), providing a Ruby interface for working with style-aware piece representations through an intuitive object-oriented API.
 
 ## Installation
 
 ```ruby
 # In your Gemfile
-gem "pnn"
+gem "sashite-pnn"
 ```
 
 Or install manually:
 
 ```sh
-gem install pnn
+gem install sashite-pnn
 ```
 
 ## PNN Format
 
-A PNN record consists of a single ASCII letter that represents a piece, with optional prefixes and/or suffixes to indicate modifiers or state information:
+A PNN record consists of a [PIN](https://sashite.dev/specs/pin/1.0.0/) string with an optional derivation suffix:
 
 ```
-[<prefix>]<letter>[<suffix>]
+<pin>[<suffix>]
 ```
 
 Where:
-- `<letter>` is a single ASCII letter (`a-z` or `A-Z`), with uppercase representing the first player's pieces and lowercase representing the second player's pieces
-- `<prefix>` is an optional modifier preceding the letter (`+` for Enhanced or `-` for Diminished state)
-- `<suffix>` is an optional modifier following the letter (`'` for Intermediate state)
+- `<pin>` is a valid PIN string (`[<state>]<letter>`)
+- `<suffix>` is an optional derivation marker (`'` for foreign style)
+
+Examples:
+- `K` - First player king with native style
+- `K'` - First player king with foreign style
+- `+R` - First player rook with enhanced state and native style
+- `+R'` - First player rook with enhanced state and foreign style
 
 ## Basic Usage
 
 ### Creating Piece Objects
 
-The primary interface is the `Pnn::Piece` class, which represents a single piece in PNN format:
+The primary interface is the `Sashite::Pnn::Piece` class, which represents a single piece in PNN format:
 
 ```ruby
-require "pnn"
+require "sashite/pnn"
 
 # Parse a PNN string into a piece object
-piece = Pnn::Piece.parse("k")
-# => #<Pnn::Piece:0x... @letter="k">
+piece = Sashite::Pnn::Piece.parse("k")
+# => #<Sashite::Pnn::Piece letter="k" native=true>
 
-# With modifiers
-enhanced_piece = Pnn::Piece.parse("+k'")
-# => #<Pnn::Piece:0x... @letter="k", @enhanced=true, @intermediate=true>
+# With derivation marker
+foreign_piece = Sashite::Pnn::Piece.parse("k'")
+# => #<Sashite::Pnn::Piece letter="k" native=false>
+
+# With state modifiers and derivation
+enhanced_foreign = Sashite::Pnn::Piece.parse("+k'")
+# => #<Sashite::Pnn::Piece letter="k" enhanced=true native=false>
 
 # Create directly with constructor
-piece = Pnn::Piece.new("k")
-enhanced_piece = Pnn::Piece.new("k", enhanced: true, intermediate: true)
-
-# Convenience method
-piece = Pnn.piece("k", enhanced: true)
+piece = Sashite::Pnn::Piece.new("k")
+foreign_piece = Sashite::Pnn::Piece.new("k", native: false)
+enhanced_piece = Sashite::Pnn::Piece.new("k", enhanced: true, native: false)
 ```
 
 ### Converting to PNN String
@@ -69,21 +76,45 @@ piece = Pnn.piece("k", enhanced: true)
 Convert a piece object back to its PNN string representation:
 
 ```ruby
-piece = Pnn::Piece.parse("k")
+piece = Sashite::Pnn::Piece.parse("k")
 piece.to_s
 # => "k"
 
-enhanced_piece = Pnn::Piece.parse("+k'")
-enhanced_piece.to_s
+foreign_piece = Sashite::Pnn::Piece.parse("k'")
+foreign_piece.to_s
+# => "k'"
+
+enhanced_foreign = Sashite::Pnn::Piece.parse("+k'")
+enhanced_foreign.to_s
 # => "+k'"
 ```
 
-### State Manipulation
+### Style Manipulation
 
-Create new piece instances with different states:
+Create new piece instances with different styles:
 
 ```ruby
-piece = Pnn::Piece.parse("k")
+piece = Sashite::Pnn::Piece.parse("k")
+
+# Convert to foreign style
+foreign = piece.foreignize
+foreign.to_s # => "k'"
+
+# Convert to native style
+native = foreign.nativize
+native.to_s # => "k"
+
+# Toggle style
+toggled = piece.toggle_style
+toggled.to_s # => "k'"
+```
+
+### State Manipulation (inherited from PIN)
+
+All PIN state manipulation methods are available:
+
+```ruby
+piece = Sashite::Pnn::Piece.parse("k")
 
 # Enhanced state (+ prefix)
 enhanced = piece.enhance
@@ -93,17 +124,9 @@ enhanced.to_s # => "+k"
 diminished = piece.diminish
 diminished.to_s # => "-k"
 
-# Intermediate state (' suffix)
-intermediate = piece.intermediate
-intermediate.to_s # => "k'"
-
-# Remove states
-restored = enhanced.unenhance
-restored.to_s # => "k"
-
-# Combine states
-complex = piece.enhance.intermediate
-complex.to_s # => "+k'"
+# Combine with style changes
+enhanced_foreign = piece.enhance.foreignize
+enhanced_foreign.to_s # => "+k'"
 ```
 
 ### Ownership Changes
@@ -111,133 +134,168 @@ complex.to_s # => "+k'"
 Change piece ownership (case conversion):
 
 ```ruby
-white_king = Pnn::Piece.parse("K")
+white_king = Sashite::Pnn::Piece.parse("K")
 black_king = white_king.flip
 black_king.to_s # => "k"
 
-# Works with modifiers too
-enhanced_white = Pnn::Piece.parse("+K'")
-enhanced_black = enhanced_white.flip
-enhanced_black.to_s # => "+k'"
+# Works with foreign pieces too
+foreign_white = Sashite::Pnn::Piece.parse("K'")
+foreign_black = foreign_white.flip
+foreign_black.to_s # => "k'"
 ```
 
-### Clean State
+## Cross-Style Game Examples
 
-Get a piece without any modifiers:
+### Chess vs. Shōgi Match
+
+In a hybrid game where the first player uses Chess pieces and the second player uses Shōgi pieces:
 
 ```ruby
-complex_piece = Pnn::Piece.parse("+k'")
-clean_piece = complex_piece.bare
-clean_piece.to_s # => "k"
+# First player (Chess style is native)
+white_pawn = Sashite::Pnn::Piece.parse("P") # Chess pawn (native)
+white_shogi_pawn = Sashite::Pnn::Piece.parse("P'") # Shōgi pawn (foreign)
+
+# Second player (Shōgi style is native)
+black_pawn = Sashite::Pnn::Piece.parse("p") # Shōgi pawn (native)
+black_chess_pawn = Sashite::Pnn::Piece.parse("p'") # Chess pawn (foreign)
+
+# Promoted pieces with style
+promoted_shogi = Sashite::Pnn::Piece.parse("+P'") # Promoted Shōgi pawn (foreign to first player)
+```
+
+### Style Conversions During Gameplay
+
+```ruby
+# Capture and style conversion
+enemy_piece = Sashite::Pnn::Piece.parse("p'")  # Enemy's foreign piece
+captured = enemy_piece.flip.nativize           # Convert to our side with native style
+captured.to_s # => "P"
+
+# Promotion with style preservation
+pawn = Sashite::Pnn::Piece.parse("p'")         # Foreign pawn
+promoted = pawn.enhance                        # Promote while keeping foreign style
+promoted.to_s # => "+p'"
+```
+
+## Style Logic
+
+### Native vs Foreign Style
+
+- **No suffix**: Piece has the **native style** of its current side
+- **Apostrophe suffix (`'`)**: Piece has the **foreign style** (opposite side's native style)
+
+### Style Assignment
+
+```ruby
+piece = Sashite::Pnn::Piece.parse("K")
+
+# Check style
+piece.native?    # => true
+piece.foreign?   # => false
+
+# Convert styles
+foreign = piece.foreignize
+foreign.native?  # => false
+foreign.foreign? # => true
+
+native = foreign.nativize
+native.native?   # => true
+native.foreign?  # => false
 ```
 
 ## State Modifier Methods
 
-The `Pnn::Piece` class provides methods to manipulate piece states:
+The `Sashite::Pnn::Piece` class inherits all PIN functionality and adds style methods:
 
+### Inherited from PIN
 | Method | Description | Example |
 |--------|-------------|---------|
 | `enhance` | Add Enhanced state (`+` prefix) | `k` → `+k` |
 | `unenhance` | Remove Enhanced state | `+k` → `k` |
 | `diminish` | Add Diminished state (`-` prefix) | `k` → `-k` |
 | `undiminish` | Remove Diminished state | `-k` → `k` |
-| `intermediate` | Add Intermediate state (`'` suffix) | `k` → `k'` |
-| `unintermediate` | Remove Intermediate state | `k'` → `k` |
-| `bare` | Remove all modifiers | `+k'` → `k` |
+| `normalize` | Remove all state modifiers | `+k` → `k` |
 | `flip` | Change ownership (case) | `K` → `k`, `k` → `K` |
 
-All state manipulation methods return new `Pnn::Piece` instances, leaving the original unchanged (immutable design).
+### PNN-Specific Style Methods
+| Method | Description | Example |
+|--------|-------------|---------|
+| `foreignize` | Convert to foreign style | `k` → `k'` |
+| `nativize` | Convert to native style | `k'` → `k` |
+| `toggle_style` | Toggle between native/foreign | `k` → `k'`, `k'` → `k` |
 
-## Piece Modifiers
+All methods return new `Sashite::Pnn::Piece` instances, leaving the original unchanged (immutable design).
 
-PNN supports prefixes and suffixes for pieces to denote various states or capabilities. It's important to note that these modifiers are rule-agnostic - they provide a framework for representing piece states, but their specific meaning is determined by the game implementation:
+## API Reference
 
-- **Enhanced state (`+`)**: Represents pieces with enhanced capabilities
-  - Example in shogi: `+p` represents a promoted pawn (tokin)
-  - Example in chess variants: `+Q` might represent a queen with special powers
+### Module Methods
 
-- **Diminished state (`-`)**: Represents pieces with reduced capabilities
-  - Example in variants: `-R` might represent a rook with restricted movement
-  - Example in chess: `-N` could indicate a knight that has been partially immobilized
+- `Sashite::Pnn.valid?(pnn_string)` - Check if a string is valid PNN notation
+- `Sashite::Pnn.parse(pnn_string)` - Parse a PNN string into a piece object
 
-- **Intermediate state (`'`)**: Represents pieces with special temporary states
-  - Example in chess: `R'` represents a rook that can still be used for castling
-  - Example in chess: `P'` represents a pawn that can be captured en passant
-  - Example in variants: `B'` might indicate a bishop with a special one-time ability
+### Sashite::Pnn::Piece Class Methods
 
-These modifiers have no intrinsic semantics in the PNN specification itself. They merely provide a flexible framework for representing piece-specific conditions or states while maintaining PNN's rule-agnostic nature.
+- `Sashite::Pnn::Piece.parse(pnn_string)` - Parse a PNN string into a piece object
+- `Sashite::Pnn::Piece.new(letter, **options)` - Create a new piece instance
 
-## Examples of PNN in Common Games
+### Instance Methods
 
-### Chess Examples
+#### Style Queries
+- `#native?` - Check if piece has native style
+- `#foreign?` - Check if piece has foreign style
+
+#### Style Manipulation
+- `#foreignize` - Convert to foreign style
+- `#nativize` - Convert to native style
+- `#toggle_style` - Toggle between native/foreign style
+
+#### Inherited PIN Methods
+All methods from `Sashite::Pin::Piece` are available, including state queries, state manipulation, and conversion methods.
+
+#### Conversion
+- `#to_s` - Convert to PNN string representation
+- `#to_pin` - Convert to underlying PIN representation
+- `#inspect` - Detailed string representation for debugging
+
+## Examples in Common Games
+
+### Single-Style Games
 
 ```ruby
-# Standard pieces
-king = Pnn::Piece.parse("K")           # White king
-black_king = Pnn::Piece.parse("k")     # Black king
-queen = Pnn::Piece.parse("Q")          # White queen
+# Western Chess (both players use Chess style)
+white_king = Sashite::Pnn::Piece.parse("K")      # White king
+black_king = Sashite::Pnn::Piece.parse("k")      # Black king
+castling_rook = Sashite::Pnn::Piece.parse("+R")  # Rook that can castle
 
-# Create pieces directly
-king = Pnn::Piece.new("K")             # White king
-black_king = Pnn::Piece.new("k")       # Black king
-
-# Pieces with special states
-unmoved_rook = Pnn::Piece.parse("R'") # Rook that can castle
-en_passant_pawn = Pnn::Piece.parse("P'") # Pawn vulnerable to en passant
-
-# Creating modified pieces
-promoted_pawn = Pnn::Piece.parse("p").enhance # "+p"
-weakened_queen = Pnn::Piece.parse("Q").diminish # "-Q"
-
-# Or create directly with modifiers
-promoted_pawn = Pnn::Piece.new("p", enhanced: true) # "+p"
-weakened_queen = Pnn::Piece.new("Q", diminished: true) # "-Q"
-
-# Using convenience method
-special_knight = Pnn.piece("N", intermediate: true) # "N'"
+# Japanese Shōgi (both players use Shōgi style)
+white_king = Sashite::Pnn::Piece.parse("K")      # White king
+promoted_pawn = Sashite::Pnn::Piece.parse("+P")  # Promoted pawn (tokin)
 ```
 
-### Shogi Examples
+### Cross-Style Games
 
 ```ruby
-# Standard pieces
-king = Pnn::Piece.parse("K")           # Oushou (King)
-pawn = Pnn::Piece.parse("P")           # Fuhyou (Pawn)
-
-# Create directly
-king = Pnn::Piece.new("K")             # Oushou (King)
-pawn = Pnn::Piece.new("P")             # Fuhyou (Pawn)
-
-# Promoted pieces
-tokin = Pnn::Piece.parse("P").enhance # "+P" (Promoted pawn)
-narikyou = Pnn::Piece.parse("L").enhance # "+L" (Promoted lance)
-
-# Or create promoted pieces directly
-tokin = Pnn::Piece.new("P", enhanced: true) # "+P"
-narikyou = Pnn::Piece.new("L", enhanced: true) # "+L"
-
-# Using convenience method
-promoted_silver = Pnn.piece("S", enhanced: true) # "+S"
-
-# Converting between players (capture and drop)
-enemy_piece = Pnn::Piece.parse("p")
-captured_piece = enemy_piece.flip.bare # "P" (now belongs to other player, no modifiers)
+# Chess vs Shōgi hybrid
+chess_queen = Sashite::Pnn::Piece.parse("Q")     # Chess queen (native to first player)
+shogi_gold = Sashite::Pnn::Piece.parse("G'")     # Shōgi gold (foreign to first player)
+shogi_king = Sashite::Pnn::Piece.parse("k")      # Shōgi king (native to second player)
+chess_knight = Sashite::Pnn::Piece.parse("n'")   # Chess knight (foreign to second player)
 ```
 
 ## Advanced Usage
 
-### Chaining State Changes
+### Chaining Operations
 
 ```ruby
-piece = Pnn::Piece.parse("k")
+piece = Sashite::Pnn::Piece.parse("k")
 
-# Chain multiple state changes
-complex_piece = piece.enhance.intermediate.flip
-complex_piece.to_s # => "+K'"
+# Chain multiple operations
+result = piece.enhance.foreignize.flip
+result.to_s # => "+K'"
 
-# Reverse the changes
-simple_piece = complex_piece.unenhance.unintermediate.flip
-simple_piece.to_s # => "k"
+# Complex transformations
+captured_and_converted = piece.flip.nativize.enhance
+captured_and_converted.to_s # => "+K"
 ```
 
 ### Validation
@@ -246,112 +304,47 @@ All parsing automatically validates input according to the PNN specification:
 
 ```ruby
 # Valid PNN strings
-Pnn::Piece.parse("k")      # ✓
-Pnn::Piece.parse("+p")     # ✓
-Pnn::Piece.parse("K'")     # ✓
-Pnn::Piece.parse("+p'")    # ✓
-
-# Valid constructor calls
-Pnn::Piece.new("k") # ✓
-Pnn::Piece.new("p", enhanced: true) # ✓
-Pnn::Piece.new("K", intermediate: true) # ✓
-Pnn::Piece.new("p", enhanced: true, intermediate: true) # ✓
-
-# Convenience method
-Pnn.piece("k", enhanced: true) # ✓
+Sashite::Pnn::Piece.parse("k")      # ✓
+Sashite::Pnn::Piece.parse("k'")     # ✓
+Sashite::Pnn::Piece.parse("+p")     # ✓
+Sashite::Pnn::Piece.parse("+p'")    # ✓
 
 # Check validity
-Pnn.valid?("k'") # => true
-Pnn.valid?("invalid") # => false
+Sashite::Pnn.valid?("k'") # => true
+Sashite::Pnn.valid?("invalid") # => false
 
 # Invalid PNN strings raise ArgumentError
-Pnn::Piece.parse("")       # ✗ ArgumentError
-Pnn::Piece.parse("kp")     # ✗ ArgumentError
-Pnn::Piece.parse("++k")    # ✗ ArgumentError
-Pnn::Piece.parse("k''")    # ✗ ArgumentError
-
-# Invalid constructor calls raise ArgumentError
-Pnn::Piece.new("")         # ✗ ArgumentError
-Pnn::Piece.new("kp")       # ✗ ArgumentError
-Pnn::Piece.new("k", enhanced: true, diminished: true) # ✗ ArgumentError
+Sashite::Pnn::Piece.parse("")        # ✗ ArgumentError
+Sashite::Pnn::Piece.parse("k''")     # ✗ ArgumentError
+Sashite::Pnn::Piece.parse("++k")     # ✗ ArgumentError
 ```
-
-### Inspection and Debugging
-
-```ruby
-piece = Pnn::Piece.parse("+k'")
-
-# Get detailed information
-piece.inspect
-# => "#<Pnn::Piece:0x... letter='k' enhanced=true intermediate=true>"
-
-# Check individual states
-piece.enhanced?      # => true
-piece.diminished?    # => false
-piece.intermediate?  # => true
-piece.uppercase?     # => false (it's lowercase 'k')
-piece.lowercase?     # => true
-```
-
-## API Reference
-
-### Module Methods
-
-- `Pnn.valid?(pnn_string)` - Check if a string is valid PNN notation
-- `Pnn.piece(letter, **options)` - Convenience method to create pieces
-
-### Pnn::Piece Class Methods
-
-- `Pnn::Piece.parse(pnn_string)` - Parse a PNN string into a piece object
-- `Pnn::Piece.new(letter, **options)` - Create a new piece instance
-
-### Instance Methods
-
-#### State Queries
-- `#enhanced?` - Check if piece has enhanced state
-- `#diminished?` - Check if piece has diminished state
-- `#intermediate?` - Check if piece has intermediate state
-- `#bare?` - Check if piece has no modifiers
-- `#uppercase?` - Check if piece belongs to first player
-- `#lowercase?` - Check if piece belongs to second player
-
-#### State Manipulation
-- `#enhance` - Add enhanced state
-- `#unenhance` - Remove enhanced state
-- `#diminish` - Add diminished state
-- `#undiminish` - Remove diminished state
-- `#intermediate` - Add intermediate state
-- `#unintermediate` - Remove intermediate state
-- `#bare` - Remove all modifiers
-- `#flip` - Change ownership (case)
-
-#### Conversion
-- `#to_s` - Convert to PNN string representation
-- `#inspect` - Detailed string representation for debugging
 
 ## Properties of PNN
 
-* **Rule-agnostic**: PNN does not encode legality, validity, or game-specific conditions.
-* **Canonical representation**: Ensures that equivalent pieces yield identical strings.
-* **State modifiers**: Express special conditions without compromising rule neutrality.
-* **Immutable objects**: All state changes return new instances, ensuring thread safety.
+* **PIN compatibility**: All valid PIN strings are valid PNN strings
+* **Style awareness**: Distinguishes pieces by their style origin
+* **Rule-agnostic**: PNN does not encode legality, validity, or game-specific conditions
+* **Cross-tradition support**: Enables hybrid game scenarios
+* **Immutable objects**: All operations return new instances, ensuring thread safety
+* **Compact format**: Minimal overhead (single character suffix for style)
 
 ## Constraints
 
-* PNN supports exactly **two players**.
-* Players are assigned distinct casing: **uppercase letters** (`A-Z`) represent pieces of the player who moves first in the initial position; **lowercase letters** (`a-z`) represent the second player.
-* A maximum of **26 unique piece types per player** is allowed, as identifiers must use single letters (`a-z` or `A-Z`).
-* Modifiers can only be applied to pieces **on the board**, as they express state information. Pieces held off the board (e.g., pieces in hand or captured pieces) must never include modifiers; only the base letter identifier is used.
+* PNN inherits all PIN constraints (two players, 26 piece types maximum)
+* Each side must have a defined native style
+* Style assignment is rule-dependent and remains fixed throughout the match
+* Foreign style pieces represent adoption of the opponent's style system
 
 ## Documentation
 
-- [Official PNN Specification](https://sashite.dev/documents/pnn/1.0.0/)
+- [Official PNN Specification](https://sashite.dev/specs/pnn/1.0.0/)
+- [PIN Specification](https://sashite.dev/specs/pin/1.0.0/)
 - [API Documentation](https://rubydoc.info/github/sashite/pnn.rb/main)
 
 ## License
 
-The [gem](https://rubygems.org/gems/pnn) is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
+Available as open source under the [MIT License](https://opensource.org/licenses/MIT).
 
-## About Sashité
+## About
 
-This project is maintained by [Sashité](https://sashite.com/) — promoting chess variants and sharing the beauty of Chinese, Japanese, and Western chess cultures.
+Maintained by [Sashité](https://sashite.com/) — promoting chess variants and sharing the beauty of board game cultures.

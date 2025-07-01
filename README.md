@@ -59,12 +59,6 @@ shogi_style.to_s                            # => "SHOGI"
 style.first_player?                         # => true
 black_chess.second_player?                  # => true
 
-# Attribute access
-style.identifier                            # => "CHESS"
-black_chess.identifier                      # => "chess"
-style.identifier                            # => "CHESS"
-black_chess.identifier                      # => "chess"
-
 # Name and side comparison
 chess1 = Sashite::Snn.parse("CHESS")
 chess2 = Sashite::Snn.parse("chess")
@@ -423,7 +417,6 @@ This design ensures:
 # name: :Chess (normalized with proper capitalization)
 # side: :second (inferred from lowercase input)
 # ↓ Display
-# identifier: "chess" (computed from name + side)
 # SNN: "chess" (final representation)
 ```
 

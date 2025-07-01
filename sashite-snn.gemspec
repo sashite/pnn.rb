@@ -5,15 +5,15 @@ Gem::Specification.new do |spec|
   spec.version = ::File.read("VERSION.semver").chomp
   spec.author  = "Cyril Kato"
   spec.email   = "contact@cyril.email"
-  spec.summary = "Style Name Notation (SNN) support for the Ruby language."
+  spec.summary = "SNN (Style Name Notation) implementation for Ruby with immutable style objects"
 
   spec.description = <<~DESC
-    A clean, minimal Ruby implementation of Style Name Notation (SNN) for abstract strategy games.
-    SNN provides a consistent and rule-agnostic format for identifying piece styles, enabling
-    clear distinction between different piece traditions, variants, or design approaches within
-    multi-style gaming environments. Features include player-based casing, style validation,
-    and cross-style compatibility. Perfect for game engines, multi-tradition environments,
-    and hybrid gaming systems.
+    SNN (Style Name Notation) provides a rule-agnostic format for identifying styles
+    in abstract strategy board games. This gem implements the SNN Specification v1.0.0 with
+    a modern Ruby interface featuring immutable style objects and functional programming
+    principles. SNN uses standardized naming conventions with case-based side encoding,
+    enabling clear distinction between different traditions in multi-style gaming environments.
+    Perfect for cross-tradition matches, game engines, and hybrid gaming systems.
   DESC
 
   spec.homepage               = "https://github.com/sashite/snn.rb"

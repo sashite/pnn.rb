@@ -111,7 +111,7 @@ xiangqi = Sashite::Snn.style(:Xiangqi, :first)    # => traditional xiangqi
 makruk = Sashite::Snn.style(:Makruk, :first)      # => traditional makruk
 
 # Player variations
-white_chess = chess                                # => first player
+white_chess = chess                               # => first player
 black_chess = chess.flip                          # => second player
 black_chess.to_s                                  # => "chess"
 ```

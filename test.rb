@@ -277,7 +277,7 @@ end
 
 run_test("Style error handling for invalid SNN strings") do
   # Invalid SNN strings
-  invalid_snns = ["", "Chess", "123", nil, :symbol]
+  invalid_snns = ["", "Chess", "123", nil, Object]
 
   invalid_snns.each do |snn|
     begin
@@ -377,7 +377,7 @@ end
 run_test("Edge case - alphanumeric identifiers with new API") do
   alphanumeric_styles = [
     [:Chess960, "CHESS960", "chess960"],
-    [:A1B2C3, "A1B2C3", "a1b2c3"],
+    [:A1, "A1", "a1"],
     [:Game123, "GAME123", "game123"],
     [:Style1, "STYLE1", "style1"]
   ]

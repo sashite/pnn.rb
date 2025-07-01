@@ -7,7 +7,6 @@ GEM
   remote: https://rubygems.org/
   specs:
     ast (2.4.3)
-    awesome_print (1.9.2)
     date (3.4.1)
     debug (1.11.0)
       irb (~> 1.10)
@@ -88,7 +87,6 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  awesome_print
   bundler
   debug
   rake

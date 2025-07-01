@@ -3,47 +3,69 @@
 require_relative "snn/style"
 
 module Sashite
-  # Style Name Notation (SNN) module
+  # SNN (Style Name Notation) implementation for Ruby
   #
-  # SNN provides a consistent and rule-agnostic format for identifying piece styles
-  # in abstract strategy board games. It enables clear distinction between different
-  # piece traditions, variants, or design approaches within multi-style gaming environments.
+  # Provides a rule-agnostic format for identifying styles in abstract strategy board games.
+  # SNN uses standardized naming conventions with case-based side encoding, enabling clear
+  # distinction between different traditions in multi-style gaming environments.
   #
-  # @see https://sashite.dev/documents/snn/1.0.0/ SNN Specification v1.0.0
+  # Format: <style-identifier>
+  # - Uppercase identifier: First player styles (CHESS, SHOGI, XIANGQI)
+  # - Lowercase identifier: Second player styles (chess, shogi, xiangqi)
+  # - Case consistency: Entire identifier must be uppercase or lowercase
+  #
+  # Examples:
+  #   "CHESS"  - First player chess style
+  #   "chess"  - Second player chess style
+  #   "SHOGI"  - First player shōgi style
+  #   "shogi"  - Second player shōgi style
+  #
+  # See: https://sashite.dev/specs/snn/1.0.0/
   module Snn
-    # SNN validation regular expression
-    # Matches: uppercase style (A-Z followed by A-Z0-9*) or lowercase style (a-z followed by a-z0-9*)
-    VALIDATION_REGEX = /\A([A-Z][A-Z0-9]*|[a-z][a-z0-9]*)\z/
+    # Regular expression for SNN validation
+    # Matches: uppercase alphanumeric identifier OR lowercase alphanumeric identifier
+    SNN_REGEX = /\A([A-Z][A-Z0-9]*|[a-z][a-z0-9]*)\z/
 
-    # Check if a string is valid SNN notation
+    # Check if a string is a valid SNN notation
     #
-    # @param snn_string [String] The string to validate
-    # @return [Boolean] true if the string is valid SNN notation, false otherwise
+    # @param snn [String] The string to validate
+    # @return [Boolean] true if valid SNN, false otherwise
     #
     # @example
-    #   Sashite::Snn.valid?("CHESS")      # => true
-    #   Sashite::Snn.valid?("shogi")      # => true
-    #   Sashite::Snn.valid?("Chess")      # => false (mixed case)
-    #   Sashite::Snn.valid?("123")        # => false (must start with letter)
-    #   Sashite::Snn.valid?("")           # => false (empty string)
-    def self.valid?(snn_string)
-      return false unless snn_string.is_a?(String)
-      return false if snn_string.empty?
+    #   Sashite::Snn.valid?("CHESS")    # => true
+    #   Sashite::Snn.valid?("chess")    # => true
+    #   Sashite::Snn.valid?("Chess")    # => false
+    #   Sashite::Snn.valid?("123")      # => false
+    def self.valid?(snn)
+      return false unless snn.is_a?(::String)
 
-      VALIDATION_REGEX.match?(snn_string)
+      snn.match?(SNN_REGEX)
     end
 
-    # Convenience method to create a style object
+    # Parse an SNN string into a Style object
     #
-    # @param identifier [String] The style identifier
-    # @return [Sashite::Snn::Style] A new style object
-    # @raise [ArgumentError] if the identifier is invalid
-    #
+    # @param snn_string [String] SNN notation string
+    # @return [Snn::Style] new style instance
+    # @raise [ArgumentError] if the SNN string is invalid
     # @example
-    #   style = Sashite::Snn.style("CHESS")
-    #   # => #<Sashite::Snn::Style:0x... @identifier="CHESS">
-    def self.style(identifier)
-      Style.new(identifier)
+    #   Sashite::Snn.parse("CHESS")     # => #<Snn::Style name=:Chess side=:first>
+    #   Sashite::Snn.parse("chess")     # => #<Snn::Style name=:Chess side=:second>
+    #   Sashite::Snn.parse("SHOGI")     # => #<Snn::Style name=:Shogi side=:first>
+    def self.parse(snn_string)
+      Style.parse(snn_string)
+    end
+
+    # Create a new style instance
+    #
+    # @param name [Symbol] style name (with proper capitalization)
+    # @param side [Symbol] player side (:first or :second)
+    # @return [Snn::Style] new style instance
+    # @raise [ArgumentError] if parameters are invalid
+    # @example
+    #   Sashite::Snn.style(:Chess, :first)     # => #<Snn::Style name=:Chess side=:first>
+    #   Sashite::Snn.style(:Shogi, :second)    # => #<Snn::Style name=:Shogi side=:second>
+    def self.style(name, side)
+      Style.new(name, side)
     end
   end
 end

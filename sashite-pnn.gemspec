@@ -1,16 +1,22 @@
 # frozen_string_literal: true
 
 Gem::Specification.new do |spec|
-  spec.name                   = "sashite-pnn"
-  spec.version                = ::File.read("VERSION.semver").chomp
-  spec.author                 = "Cyril Kato"
-  spec.email                  = "contact@cyril.email"
-  spec.summary                = "Modern Ruby implementation of Piece Name Notation (PNN) for abstract strategy games."
-  spec.description            = "A clean, immutable Ruby interface for working with piece identifiers in PNN format. " \
-                                "PNN extends PIN notation to provide style-aware piece representation with derivation " \
-                                "markers for cross-style games. Features include all four fundamental piece attributes " \
-                                "(type, side, state, style), enabling hybrid game scenarios and piece origin tracking. " \
-                                "Perfect for game engines, analysis tools, and cross-tradition board game applications."
+  spec.name    = "sashite-pnn"
+  spec.version = ::File.read("VERSION.semver").chomp
+  spec.author  = "Cyril Kato"
+  spec.email   = "contact@cyril.email"
+  spec.summary = "PNN (Piece Name Notation) implementation for Ruby extending PIN with style derivation markers"
+
+  spec.description = <<~DESC
+    PNN (Piece Name Notation) extends PIN to provide style-aware piece representation
+    in abstract strategy board games. This gem implements the PNN Specification v1.0.0 with
+    a modern Ruby interface featuring immutable piece objects and functional programming
+    principles. PNN adds derivation markers to PIN that distinguish pieces by their style
+    origin, enabling cross-style game scenarios and piece origin tracking. Represents all
+    four Game Protocol piece attributes with full PIN backward compatibility. Perfect for
+    game engines, cross-tradition tournaments, and hybrid board game environments.
+  DESC
+
   spec.homepage               = "https://github.com/sashite/pnn.rb"
   spec.license                = "MIT"
   spec.files                  = ::Dir["LICENSE.md", "README.md", "lib/**/*"]

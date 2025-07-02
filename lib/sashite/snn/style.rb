@@ -53,12 +53,12 @@ module Sashite
       # Parse an SNN string into a Style object
       #
       # @param snn_string [String] SNN notation string
-      # @return [Style] new style instance
+      # @return [Style] parsed style object with normalized name and inferred side
       # @raise [ArgumentError] if the SNN string is invalid
-      # @example
-      #   Snn::Style.parse("CHESS")     # => #<Snn::Style name=:Chess side=:first>
-      #   Snn::Style.parse("chess")     # => #<Snn::Style name=:Chess side=:second>
-      #   Snn::Style.parse("SHOGI")     # => #<Snn::Style name=:Shogi side=:first>
+      # @example Parse SNN strings with case normalization
+      #   Sashite::Snn::Style.parse("CHESS") # => #<Snn::Style name=:Chess side=:first>
+      #   Sashite::Snn::Style.parse("chess") # => #<Snn::Style name=:Chess side=:second>
+      #   Sashite::Snn::Style.parse("SHOGI") # => #<Snn::Style name=:Shogi side=:first>
       def self.parse(snn_string)
         string_value = String(snn_string)
         matches = match_pattern(string_value)
@@ -74,21 +74,36 @@ module Sashite
         new(style_name, style_side)
       end
 
+      # Check if a string is a valid SNN notation
+      #
+      # @param snn_string [String] the string to validate
+      # @return [Boolean] true if valid SNN, false otherwise
+      #
+      # @example Validate SNN strings
+      #   Sashite::Snn::Style.valid?("CHESS") # => true
+      #   Sashite::Snn::Style.valid?("chess") # => true
+      #   Sashite::Snn::Style.valid?("Chess") # => false
+      def self.valid?(snn_string)
+        return false unless snn_string.is_a?(::String)
+
+        snn_string.match?(SNN_PATTERN)
+      end
+
       # Convert the style to its SNN string representation
       #
-      # @return [String] SNN notation string
-      # @example
-      #   style.to_s  # => "CHESS"
-      #   style.to_s  # => "chess"
-      #   style.to_s  # => "SHOGI"
+      # @return [String] SNN notation string with case based on side
+      # @example Display different sides
+      #   style.to_s  # => "CHESS" (first player)
+      #   style.to_s  # => "chess" (second player)
+      #   style.to_s  # => "SHOGI" (first player)
       def to_s
         first_player? ? name.to_s.upcase : name.to_s.downcase
       end
 
       # Create a new style with opposite ownership (side)
       #
-      # @return [Style] new style instance with flipped side
-      # @example
+      # @return [Style] new immutable style instance with flipped side
+      # @example Flip player sides
       #   style.flip  # (:Chess, :first) => (:Chess, :second)
       def flip
         self.class.new(name, opposite_side)
@@ -97,8 +112,8 @@ module Sashite
       # Create a new style with a different name (keeping same side)
       #
       # @param new_name [Symbol] new name (with proper capitalization)
-      # @return [Style] new style instance with different name
-      # @example
+      # @return [Style] new immutable style instance with different name
+      # @example Change style name
       #   style.with_name(:Shogi)  # (:Chess, :first) => (:Shogi, :first)
       def with_name(new_name)
         self.class.validate_name(new_name)
@@ -110,8 +125,8 @@ module Sashite
       # Create a new style with a different side (keeping same name)
       #
       # @param new_side [Symbol] :first or :second
-      # @return [Style] new style instance with different side
-      # @example
+      # @return [Style] new immutable style instance with different side
+      # @example Change player side
       #   style.with_side(:second)  # (:Chess, :first) => (:Chess, :second)
       def with_side(new_side)
         self.class.validate_side(new_side)
@@ -137,8 +152,8 @@ module Sashite
       # Check if this style has the same name as another
       #
       # @param other [Style] style to compare with
-      # @return [Boolean] true if same name
-      # @example
+      # @return [Boolean] true if both styles have the same name
+      # @example Compare style names
       #   chess1.same_name?(chess2)  # (:Chess, :first) and (:Chess, :second) => true
       def same_name?(other)
         return false unless other.is_a?(self.class)
@@ -149,7 +164,7 @@ module Sashite
       # Check if this style belongs to the same side as another
       #
       # @param other [Style] style to compare with
-      # @return [Boolean] true if same side
+      # @return [Boolean] true if both styles belong to the same side
       def same_side?(other)
         return false unless other.is_a?(self.class)
 
@@ -159,7 +174,7 @@ module Sashite
       # Custom equality comparison
       #
       # @param other [Object] object to compare with
-      # @return [Boolean] true if styles are equal
+      # @return [Boolean] true if both objects are styles with identical name and side
       def ==(other)
         return false unless other.is_a?(self.class)
 
@@ -171,7 +186,7 @@ module Sashite
 
       # Custom hash implementation for use in collections
       #
-      # @return [Integer] hash value
+      # @return [Integer] hash value based on class, name, and side
       def hash
         [self.class, name, side].hash
       end

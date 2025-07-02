@@ -89,6 +89,7 @@ black_shogi.to_s                            # => "shogi"
 
 ### Regular Expression
 ```ruby
+# Pattern accessible via Sashite::Snn::Style::SNN_PATTERN
 /\A([A-Z][A-Z0-9]*|[a-z][a-z0-9]*)\z/
 ```
 
@@ -216,8 +217,12 @@ style2.to_s    # => "chess" (lowercase display)
 - `#same_side?(other)` - Check if same side
 - `#==(other)` - Full equality comparison
 
-### Constants
-- `Sashite::Snn::SNN_REGEX` - Regular expression for SNN validation
+### Style Class Constants
+
+- `Sashite::Snn::Style::FIRST_PLAYER` - Symbol for first player (:first)
+- `Sashite::Snn::Style::SECOND_PLAYER` - Symbol for second player (:second)
+- `Sashite::Snn::Style::VALID_SIDES` - Array of valid sides
+- `Sashite::Snn::Style::SNN_PATTERN` - Regular expression for SNN validation
 
 ## Advanced Usage
 
@@ -377,7 +382,7 @@ Following the [Game Protocol](https://sashite.dev/game-protocol/):
 
 | Protocol Attribute | SNN Encoding | Examples | Notes |
 |-------------------|--------------|----------|-------|
-| **Style** | Alphanumeric identifier | `CHESS`, `SHOGI`, `XIANGQI` | Name is always stored as uppercase symbol |
+| **Style** | Alphanumeric identifier | `CHESS`, `SHOGI`, `XIANGQI` | Name is always stored with proper capitalization |
 | **Side** | Case encoding | `CHESS` = First player, `chess` = Second player | Case is determined by side during rendering |
 
 **Name Convention**: All style names are internally represented with proper capitalization (first letter uppercase, rest lowercase). The display case is determined by the `side` attribute: first player styles display as uppercase, second player styles as lowercase.

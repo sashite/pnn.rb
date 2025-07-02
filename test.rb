@@ -466,12 +466,12 @@ run_test("Regex pattern compliance") do
 end
 
 # Test constants
-run_test("SNN_REGEX constant is correctly defined") do
-  regex = Sashite::Snn::SNN_REGEX
+run_test("Regular expression constant is correctly defined") do
+  regex = Sashite::Snn::Style::SNN_PATTERN
 
-  raise "SNN_REGEX should match valid SNNs" unless "CHESS".match?(regex)
-  raise "SNN_REGEX should match lowercase SNNs" unless "chess".match?(regex)
-  raise "SNN_REGEX should not match mixed case" if "Chess".match?(regex)
+  raise "SNN_PATTERN should match valid SNNs" unless "CHESS".match?(regex)
+  raise "SNN_PATTERN should match lowercase SNNs" unless "chess".match?(regex)
+  raise "SNN_PATTERN should not match mixed case" if "Chess".match?(regex)
 end
 
 # Test performance with new API

@@ -40,8 +40,8 @@ piece.state                              # => :normal
 piece.native?                            # => true
 
 # Create pieces directly
-piece = Sashite::Pnn.piece(:K, :first)                    # => #<Pnn::Piece type=:K side=:first state=:normal native=true>
-piece = Sashite::Pnn::Piece.new(:R, :second, :enhanced, false)  # => #<Pnn::Piece type=:R side=:second state=:enhanced native=false>
+piece = Sashite::Pnn.piece(:K, :first) # => #<Pnn::Piece type=:K side=:first state=:normal native=true>
+piece = Sashite::Pnn::Piece.new(:R, :second, :enhanced, false) # => #<Pnn::Piece type=:R side=:second state=:enhanced native=false>
 
 # Validate PNN strings
 Sashite::Pnn.valid?("K")                 # => true
@@ -107,11 +107,11 @@ king1.same_type?(queen)                  # => false (different types)
 native_king = Sashite::Pnn.parse("K")
 foreign_king = Sashite::Pnn.parse("K'")
 
-native_king.same_style?(foreign_king)    # => false (different derivation)
+native_king.same_style?(foreign_king) # => false (different derivation)
 
 # Functional transformations can be chained
 pawn = Sashite::Pnn.parse("P")
-enemy_foreign_promoted = pawn.flip.derive.enhance  # => "+p'" (second player foreign promoted pawn)
+enemy_foreign_promoted = pawn.flip.derive.enhance # => "+p'" (second player foreign promoted pawn)
 ```
 
 ## Format Specification
@@ -194,8 +194,8 @@ black_pieces.map(&:to_s)                         # => ["k", "q", "+r", "b", "n",
 
 ```ruby
 # Simulate capture with style change (Ōgi rules)
-chess_queen = Sashite::Pnn.parse("q'")           # Black chess queen (foreign for shōgi player)
-captured = chess_queen.flip.with_type(:P).underive  # Becomes white native pawn
+chess_queen = Sashite::Pnn.parse("q'") # Black chess queen (foreign for shōgi player)
+captured = chess_queen.flip.with_type(:P).underive # Becomes white native pawn
 
 chess_queen.to_s                                 # => "q'" (black foreign queen)
 captured.to_s                                    # => "P" (white native pawn)
@@ -271,9 +271,12 @@ foreign_piece.to_s                              # => "r'" (black foreign rook)
 - `#==(other)` - Full equality comparison
 
 ### Constants
-- `Sashite::Pnn::Piece::PNN_PATTERN` - Regular expression for PNN validation
 - `Sashite::Pnn::Piece::NATIVE` - Constant for native style (`true`)
 - `Sashite::Pnn::Piece::FOREIGN` - Constant for foreign style (`false`)
+- `Sashite::Pnn::Piece::FOREIGN_SUFFIX` - Derivation suffix for foreign pieces (`"'"`)
+- `Sashite::Pnn::Piece::NATIVE_SUFFIX` - Derivation suffix for native pieces (`""`)
+
+**Note**: PNN validation leverages the existing `Sashite::Pin::Piece::PIN_PATTERN` for the PIN component, with additional logic for the optional derivation suffix.
 
 ## Advanced Usage
 
@@ -307,14 +310,14 @@ derived = original.derive
 flipped = original.flip
 
 # Original piece is never modified
-puts original.to_s    # => "K"
-puts enhanced.to_s    # => "+K"
-puts derived.to_s     # => "K'"
-puts flipped.to_s     # => "k"
+puts original    # => "K"
+puts enhanced    # => "+K"
+puts derived     # => "K'"
+puts flipped     # => "k"
 
 # Transformations can be chained
 result = original.flip.derive.enhance.with_type(:Q)
-puts result.to_s      # => "+q'"
+puts result # => "+q'"
 ```
 
 ### Cross-Style Game State Management
@@ -341,12 +344,12 @@ class CrossStyleGameBoard
     mutated = mutated.with_type(new_type) if new_type
 
     @pieces[to_square] = capturing
-    mutated  # Return mutated captured piece for hand
+    mutated # Return mutated captured piece for hand
   end
 
   def pieces_by_style_derivation
     {
-      native: @pieces.select { |_, piece| piece.native? },
+      native:  @pieces.select { |_, piece| piece.native? },
       foreign: @pieces.select { |_, piece| piece.derived? }
     }
   end
@@ -356,7 +359,7 @@ end
 board = CrossStyleGameBoard.new(:chess, :shogi)
 board.place("e1", Sashite::Pnn.piece(:K, :first))               # Chess king
 board.place("e8", Sashite::Pnn.piece(:K, :second))              # Shōgi king
-board.place("d4", Sashite::Pnn.piece(:Q, :first, :normal, false))  # Chess queen using Shōgi style
+board.place("d4", Sashite::Pnn.piece(:Q, :first, :normal, false)) # Chess queen using Shōgi style
 
 analysis = board.pieces_by_style_derivation
 puts analysis[:native].size    # => 2
@@ -389,16 +392,16 @@ pnn_pieces.map { |p| convert_pnn_to_pin(p) }  # => ["K", "Q", "+R", "-P", "k", "
 ### Move Validation Example
 ```ruby
 def can_promote_in_style?(piece, target_rank, style_rules)
-  return false unless piece.normal?  # Already promoted pieces can't promote again
+  return false unless piece.normal? # Already promoted pieces can't promote again
 
   case [piece.type, piece.native? ? style_rules[:native] : style_rules[:foreign]]
-  when [:P, :chess]  # Chess pawn
+  when %i[P chess]  # Chess pawn
     (piece.first_player? && target_rank == 8) ||
-    (piece.second_player? && target_rank == 1)
-  when [:P, :shogi]  # Shōgi pawn
+      (piece.second_player? && target_rank == 1)
+  when %i[P shogi]  # Shōgi pawn
     (piece.first_player? && target_rank >= 7) ||
-    (piece.second_player? && target_rank <= 3)
-  when [:R, :shogi], [:B, :shogi]  # Shōgi major pieces
+      (piece.second_player? && target_rank <= 3)
+  when %i[R shogi], %i[B shogi] # Shōgi major pieces
     true
   else
     false

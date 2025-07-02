@@ -2,8 +2,8 @@
 
 # Tests for Sashite::Pnn (Piece Name Notation)
 #
-# Tests the PNN implementation for Ruby, focusing on the style-aware piece notation
-# with derivation markers and cross-style game support.
+# Tests the PNN implementation for Ruby, focusing on the modern object-oriented API
+# with the Piece class using symbol-based attributes and style derivation support.
 
 require_relative "lib/sashite-pnn"
 require "set"
@@ -26,12 +26,12 @@ puts
 # Test basic validation (module level)
 run_test("Module PNN validation accepts valid notations") do
   valid_pnns = [
-    # Basic PIN compatibility
+    # Native pieces (PIN compatible)
     "K", "k", "Q", "q", "R", "r", "B", "b", "N", "n", "P", "p",
     "A", "a", "Z", "z",
     "+K", "+k", "+Q", "+q", "+R", "+r", "+B", "+b", "+N", "+n", "+P", "+p",
     "-K", "-k", "-Q", "-q", "-R", "-r", "-B", "-b", "-N", "-n", "-P", "-p",
-    # PNN with foreign style markers
+    # Foreign pieces (with derivation suffix)
     "K'", "k'", "Q'", "q'", "R'", "r'", "B'", "b'", "N'", "n'", "P'", "p'",
     "A'", "a'", "Z'", "z'",
     "+K'", "+k'", "+Q'", "+q'", "+R'", "+r'", "+B'", "+b'", "+N'", "+n'", "+P'", "+p'",
@@ -45,15 +45,14 @@ end
 
 run_test("Module PNN validation rejects invalid notations") do
   invalid_pnns = [
-    # Basic invalid cases
+    # Basic invalid patterns
     "", "KK", "++K", "--K", "+-K", "-+K", "K+", "K-", "+", "-",
     "1", "9", "0", "!", "@", "#", "$", "%", "^", "&", "*", "(", ")",
     " K", "K ", " +K", "+K ", "k+", "k-", "Kk", "kK",
     "123", "ABC", "abc", "K1", "1K", "+1", "-1", "1+", "1-",
-    # PNN-specific invalid cases
-    "K''", "k''", "+'K", "'-K", "K'+", "K'-", "'K", "'k",
-    "++K'", "--K'", "K+'", "K-'", " K'", "K' ", "K 'K",
-    "K'K", "K'Q", "+K''", "-K''"
+    # PNN-specific invalid patterns
+    "'", "K''", "K'+", "+カ'", "+'K", "''K", "K'K", "'K'",
+    " K'", "K' ", " +K'", "+K' ", "++K'", "--K'", "K'+"
   ]
 
   invalid_pnns.each do |pnn|
@@ -74,207 +73,216 @@ run_test("Module parse delegates to Piece class") do
   pnn_string = "+R'"
   piece = Sashite::Pnn.parse(pnn_string)
 
-  raise "parse should return PNN Piece instance" unless piece.is_a?(Sashite::Pnn::Piece)
+  raise "parse should return Piece instance" unless piece.is_a?(Sashite::Pnn::Piece)
   raise "piece should have correct PNN string" unless piece.to_s == pnn_string
 end
 
-# Test PIN compatibility
-run_test("PNN maintains PIN compatibility") do
-  pin_strings = ["K", "k", "+R", "-p", "Q", "B"]
+# Test module piece factory method
+run_test("Module piece factory method creates correct instances") do
+  piece = Sashite::Pnn.piece(:K, :first, :enhanced, false)
 
-  pin_strings.each do |pin|
-    # Should be valid in both PIN and PNN
-    raise "#{pin} should be valid PIN" unless Sashite::Pin.valid?(pin)
-    raise "#{pin} should be valid PNN" unless Sashite::Pnn.valid?(pin)
-
-    # Should parse correctly in both
-    pin_piece = Sashite::Pin.parse(pin)
-    pnn_piece = Sashite::Pnn.parse(pin)
-
-    raise "PIN and PNN should parse to same letter" unless pin_piece.letter == pnn_piece.letter
-    raise "PIN and PNN should parse to same state" unless pin_piece.enhanced? == pnn_piece.enhanced?
-    raise "PIN and PNN should parse to same state" unless pin_piece.diminished? == pnn_piece.diminished?
-  end
+  raise "piece factory should return Piece instance" unless piece.is_a?(Sashite::Pnn::Piece)
+  raise "piece should have correct type" unless piece.type == :K
+  raise "piece should have correct side" unless piece.side == :first
+  raise "piece should have correct state" unless piece.state == :enhanced
+  raise "piece should have correct derivation" unless piece.native == false
+  raise "piece should have correct PNN string" unless piece.to_s == "+K'"
 end
 
-# Test the Piece class
-run_test("Piece.parse creates correct instances") do
+# Test the Piece class with PNN-specific features
+run_test("Piece.parse creates correct instances with all attributes") do
   test_cases = {
-    "K" => { letter: "K", enhanced: false, diminished: false, native: true },
-    "k'" => { letter: "k", enhanced: false, diminished: false, native: false },
-    "+R" => { letter: "R", enhanced: true, diminished: false, native: true },
-    "+R'" => { letter: "R", enhanced: true, diminished: false, native: false },
-    "-p" => { letter: "p", enhanced: false, diminished: true, native: true },
-    "-p'" => { letter: "p", enhanced: false, diminished: true, native: false }
+    "K" => { type: :K, side: :first, state: :normal, native: true, letter: "K", suffix: "" },
+    "k" => { type: :K, side: :second, state: :normal, native: true, letter: "k", suffix: "" },
+    "+R" => { type: :R, side: :first, state: :enhanced, native: true, letter: "R", suffix: "" },
+    "-p" => { type: :P, side: :second, state: :diminished, native: true, letter: "p", suffix: "" },
+    "K'" => { type: :K, side: :first, state: :normal, native: false, letter: "K", suffix: "'" },
+    "k'" => { type: :K, side: :second, state: :normal, native: false, letter: "k", suffix: "'" },
+    "+R'" => { type: :R, side: :first, state: :enhanced, native: false, letter: "R", suffix: "'" },
+    "-p'" => { type: :P, side: :second, state: :diminished, native: false, letter: "p", suffix: "'" }
   }
 
   test_cases.each do |pnn_string, expected|
     piece = Sashite::Pnn.parse(pnn_string)
 
+    raise "#{pnn_string}: wrong type" unless piece.type == expected[:type]
+    raise "#{pnn_string}: wrong side" unless piece.side == expected[:side]
+    raise "#{pnn_string}: wrong state" unless piece.state == expected[:state]
+    raise "#{pnn_string}: wrong native" unless piece.native == expected[:native]
     raise "#{pnn_string}: wrong letter" unless piece.letter == expected[:letter]
-    raise "#{pnn_string}: wrong enhanced state" unless piece.enhanced? == expected[:enhanced]
-    raise "#{pnn_string}: wrong diminished state" unless piece.diminished? == expected[:diminished]
-    raise "#{pnn_string}: wrong native state" unless piece.native? == expected[:native]
+    raise "#{pnn_string}: wrong suffix" unless piece.suffix == expected[:suffix]
+  end
+end
+
+run_test("Piece constructor with all parameters") do
+  test_cases = [
+    [:K, :first, :normal, true, "K"],
+    [:K, :second, :normal, true, "k"],
+    [:R, :first, :enhanced, true, "+R"],
+    [:P, :second, :diminished, true, "-p"],
+    [:K, :first, :normal, false, "K'"],
+    [:K, :second, :normal, false, "k'"],
+    [:R, :first, :enhanced, false, "+R'"],
+    [:P, :second, :diminished, false, "-p'"]
+  ]
+
+  test_cases.each do |type, side, state, native, expected_pnn|
+    piece = Sashite::Pnn::Piece.new(type, side, state, native)
+
+    raise "type should be #{type}" unless piece.type == type
+    raise "side should be #{side}" unless piece.side == side
+    raise "state should be #{state}" unless piece.state == state
+    raise "native should be #{native}" unless piece.native == native
+    raise "PNN string should be #{expected_pnn}" unless piece.to_s == expected_pnn
   end
 end
 
 run_test("Piece to_s returns correct PNN string") do
   test_cases = [
-    ["K", true, false, false, "K"],
-    ["k", false, false, false, "k'"],
-    ["R", true, true, false, "+R"],
-    ["R", false, true, false, "+R'"],
-    ["p", true, false, true, "-p"],
-    ["p", false, false, true, "-p'"]
+    [:K, :first, :normal, true, "K"],
+    [:K, :second, :normal, true, "k"],
+    [:R, :first, :enhanced, true, "+R"],
+    [:P, :second, :diminished, true, "-p"],
+    [:K, :first, :normal, false, "K'"],
+    [:K, :second, :normal, false, "k'"],
+    [:R, :first, :enhanced, false, "+R'"],
+    [:P, :second, :diminished, false, "-p'"]
   ]
 
-  test_cases.each do |letter, native, enhanced, diminished, expected|
-    piece = Sashite::Pnn::Piece.new(letter, native: native, enhanced: enhanced, diminished: diminished)
+  test_cases.each do |type, side, state, native, expected|
+    piece = Sashite::Pnn::Piece.new(type, side, state, native)
     result = piece.to_s
 
-    raise "#{letter} with native=#{native}, enhanced=#{enhanced}, diminished=#{diminished} should be #{expected}, got #{result}" unless result == expected
+    raise "#{type}, #{side}, #{state}, #{native} should be #{expected}, got #{result}" unless result == expected
   end
 end
 
-run_test("Piece to_pin returns PIN representation") do
+run_test("Piece letter, prefix, and suffix methods") do
   test_cases = [
-    ["K", true, false, false, "K"],
-    ["k'", false, false, false, "k"],
-    ["+R", true, true, false, "+R"],
-    ["+R'", false, true, false, "+R"],
-    ["-p", true, false, true, "-p"],
-    ["-p'", false, false, true, "-p"]
+    ["K", "K", "", ""],
+    ["k", "k", "", ""],
+    ["+R", "R", "+", ""],
+    ["-p", "p", "-", ""],
+    ["K'", "K", "", "'"],
+    ["k'", "k", "", "'"],
+    ["+R'", "R", "+", "'"],
+    ["-p'", "p", "-", "'"]
   ]
 
-  test_cases.each do |pnn_string, native, enhanced, diminished, expected_pin|
+  test_cases.each do |pnn_string, expected_letter, expected_prefix, expected_suffix|
     piece = Sashite::Pnn.parse(pnn_string)
-    pin_result = piece.to_pin
 
-    raise "#{pnn_string} should convert to PIN #{expected_pin}, got #{pin_result}" unless pin_result == expected_pin
+    raise "#{pnn_string}: wrong letter" unless piece.letter == expected_letter
+    raise "#{pnn_string}: wrong prefix" unless piece.prefix == expected_prefix
+    raise "#{pnn_string}: wrong suffix" unless piece.suffix == expected_suffix
+    raise "#{pnn_string}: to_s should equal prefix + letter + suffix" unless piece.to_s == "#{piece.prefix}#{piece.letter}#{piece.suffix}"
   end
 end
 
-run_test("Piece style queries") do
-  native_piece = Sashite::Pnn.parse("K")
-  foreign_piece = Sashite::Pnn.parse("K'")
+run_test("Piece state mutations return new instances") do
+  piece = Sashite::Pnn::Piece.new(:K, :first, :normal, true)
 
-  # Native piece tests
-  raise "native piece should be native" unless native_piece.native?
-  raise "native piece should not be foreign" if native_piece.foreign?
+  # Test enhance
+  enhanced = piece.enhance
+  raise "enhance should return new instance" if enhanced.equal?(piece)
+  raise "enhanced piece should be enhanced" unless enhanced.enhanced?
+  raise "enhanced piece state should be :enhanced" unless enhanced.state == :enhanced
+  raise "enhanced piece should preserve derivation" unless enhanced.native == piece.native
+  raise "original piece should be unchanged" unless piece.state == :normal
 
-  # Foreign piece tests
-  raise "foreign piece should not be native" if foreign_piece.native?
-  raise "foreign piece should be foreign" unless foreign_piece.foreign?
+  # Test diminish
+  diminished = piece.diminish
+  raise "diminish should return new instance" if diminished.equal?(piece)
+  raise "diminished piece should be diminished" unless diminished.diminished?
+  raise "diminished piece state should be :diminished" unless diminished.state == :diminished
+  raise "diminished piece should preserve derivation" unless diminished.native == piece.native
+  raise "original piece should be unchanged" unless piece.state == :normal
+
+  # Test flip
+  flipped = piece.flip
+  raise "flip should return new instance" if flipped.equal?(piece)
+  raise "flipped piece should have opposite side" unless flipped.side == :second
+  raise "flipped piece should preserve type, state, and derivation" unless flipped.type == piece.type && flipped.state == piece.state && flipped.native == piece.native
+  raise "original piece should be unchanged" unless piece.side == :first
 end
 
 run_test("Piece style mutations return new instances") do
-  piece = Sashite::Pnn.parse("K")
+  piece = Sashite::Pnn::Piece.new(:K, :first, :normal, true)
 
-  # Test nativize on native piece (should return self)
-  nativized = piece.nativize
-  raise "nativize on native piece should return self" unless nativized.equal?(piece)
+  # Test derive
+  derived = piece.derive
+  raise "derive should return new instance" if derived.equal?(piece)
+  raise "derived piece should be foreign" unless derived.derived?
+  raise "derived piece native should be false" unless derived.native == false
+  raise "derived piece should preserve type, side, and state" unless derived.type == piece.type && derived.side == piece.side && derived.state == piece.state
+  raise "original piece should be unchanged" unless piece.native == true
 
-  # Test foreignize
-  foreignized = piece.foreignize
-  raise "foreignize should return new instance" if foreignized.equal?(piece)
-  raise "foreignized piece should be foreign" unless foreignized.foreign?
-  raise "original piece should be unchanged" unless piece.native?
-  raise "foreignized piece should have same letter" unless foreignized.letter == piece.letter
-
-  # Test round-trip
-  back_to_native = foreignized.nativize
-  raise "back to native should equal original" unless back_to_native == piece
-
-  # Test toggle_style
-  toggled = piece.toggle_style
-  raise "toggle should return new instance" if toggled.equal?(piece)
-  raise "toggled piece should be foreign" unless toggled.foreign?
-
-  toggled_back = toggled.toggle_style
-  raise "toggle back should equal original" unless toggled_back == piece
+  # Test underive
+  foreign_piece = Sashite::Pnn::Piece.new(:Q, :second, :enhanced, false)
+  underived = foreign_piece.underive
+  raise "underive should return new instance" if underived.equal?(foreign_piece)
+  raise "underived piece should be native" unless underived.native?
+  raise "underived piece native should be true" unless underived.native == true
+  raise "underived piece should preserve type, side, and state" unless underived.type == foreign_piece.type && underived.side == foreign_piece.side && underived.state == foreign_piece.state
+  raise "original piece should be unchanged" unless foreign_piece.native == false
 end
 
-run_test("Piece state mutations preserve style") do
-  foreign_piece = Sashite::Pnn.parse("K'")
+run_test("Piece attribute transformations") do
+  piece = Sashite::Pnn::Piece.new(:K, :first, :normal, true)
 
-  # Test enhance preserves style
-  enhanced = foreign_piece.enhance
-  raise "enhanced piece should be foreign" unless enhanced.foreign?
-  raise "enhanced piece should be enhanced" unless enhanced.enhanced?
-  raise "enhanced piece PIN should be +K'" unless enhanced.to_s == "+K'"
+  # Test with_type
+  queen = piece.with_type(:Q)
+  raise "with_type should return new instance" if queen.equal?(piece)
+  raise "new piece should have different type" unless queen.type == :Q
+  raise "new piece should have same side, state, and derivation" unless queen.side == piece.side && queen.state == piece.state && queen.native == piece.native
 
-  # Test diminish preserves style
-  diminished = foreign_piece.diminish
-  raise "diminished piece should be foreign" unless diminished.foreign?
-  raise "diminished piece should be diminished" unless diminished.diminished?
-  raise "diminished piece PIN should be -K'" unless diminished.to_s == "-K'"
+  # Test with_side
+  black_king = piece.with_side(:second)
+  raise "with_side should return new instance" if black_king.equal?(piece)
+  raise "new piece should have different side" unless black_king.side == :second
+  raise "new piece should have same type, state, and derivation" unless black_king.type == piece.type && black_king.state == piece.state && black_king.native == piece.native
 
-  # Test flip preserves style
-  flipped = foreign_piece.flip
-  raise "flipped piece should be foreign" unless flipped.foreign?
-  raise "flipped piece should have lowercase letter" unless flipped.letter == "k"
-  raise "flipped piece PIN should be k'" unless flipped.to_s == "k'"
-end
+  # Test with_state
+  enhanced_king = piece.with_state(:enhanced)
+  raise "with_state should return new instance" if enhanced_king.equal?(piece)
+  raise "new piece should have different state" unless enhanced_king.state == :enhanced
+  raise "new piece should have same type, side, and derivation" unless enhanced_king.type == piece.type && enhanced_king.side == piece.side && enhanced_king.native == piece.native
 
-run_test("Piece constructor validation") do
-  # Valid constructor calls
-  valid_cases = [
-    ["K", { native: true }],
-    ["k", { native: false }],
-    ["R", { native: true, enhanced: true }],
-    ["p", { native: false, enhanced: false, diminished: true }]
-  ]
-
-  valid_cases.each do |letter, opts|
-    piece = Sashite::Pnn::Piece.new(letter, **opts)
-    raise "Should create valid piece for #{letter} with #{opts}" unless piece.is_a?(Sashite::Pnn::Piece)
-  end
-
-  # Invalid native parameter
-  invalid_native_cases = [nil, "true", 1, 0, :true, [true]]
-
-  invalid_native_cases.each do |invalid_native|
-    begin
-      Sashite::Pnn::Piece.new("K", native: invalid_native)
-      raise "Should have raised error for native=#{invalid_native.inspect}"
-    rescue ArgumentError => e
-      raise "Error should mention native parameter" unless e.message.include?("Native must be")
-    end
-  end
+  # Test with_derivation
+  foreign_king = piece.with_derivation(false)
+  raise "with_derivation should return new instance" if foreign_king.equal?(piece)
+  raise "new piece should have different derivation" unless foreign_king.native == false
+  raise "new piece should have same type, side, and state" unless foreign_king.type == piece.type && foreign_king.side == piece.side && foreign_king.state == piece.state
 end
 
 run_test("Piece immutability") do
-  piece = Sashite::Pnn.parse("+R'")
+  piece = Sashite::Pnn::Piece.new(:R, :first, :enhanced, false)
 
   # Test that piece is frozen
   raise "piece should be frozen" unless piece.frozen?
 
-  # Test that letter is frozen
-  raise "letter should be frozen" unless piece.letter.frozen?
-
   # Test that mutations don't affect original
   original_string = piece.to_s
   normalized = piece.normalize
-  nativized = piece.nativize
+  derived = piece.underive
 
   raise "original piece should be unchanged after normalize" unless piece.to_s == original_string
-  raise "original piece should be unchanged after nativize" unless piece.to_s == original_string
   raise "normalized piece should be different" unless normalized.to_s == "R'"
-  raise "nativized piece should be different" unless nativized.to_s == "+R"
+  raise "underived piece should be different" unless derived.to_s == "+R"
 end
 
-run_test("Piece equality and hash including style") do
-  piece1 = Sashite::Pnn.parse("K")
-  piece2 = Sashite::Pnn.parse("K")
-  piece3 = Sashite::Pnn.parse("K'")
-  piece4 = Sashite::Pnn.parse("k")
-  piece5 = Sashite::Pnn.parse("+K")
+run_test("Piece equality and hash") do
+  piece1 = Sashite::Pnn::Piece.new(:K, :first, :normal, true)
+  piece2 = Sashite::Pnn::Piece.new(:K, :first, :normal, true)
+  piece3 = Sashite::Pnn::Piece.new(:K, :second, :normal, true)
+  piece4 = Sashite::Pnn::Piece.new(:K, :first, :enhanced, true)
+  piece5 = Sashite::Pnn::Piece.new(:K, :first, :normal, false)
 
   # Test equality
   raise "identical pieces should be equal" unless piece1 == piece2
-  raise "different style should not be equal" if piece1 == piece3
-  raise "different case should not be equal" if piece1 == piece4
-  raise "different state should not be equal" if piece1 == piece5
+  raise "different side should not be equal" if piece1 == piece3
+  raise "different state should not be equal" if piece1 == piece4
+  raise "different derivation should not be equal" if piece1 == piece5
 
   # Test hash consistency
   raise "equal pieces should have same hash" unless piece1.hash == piece2.hash
@@ -284,66 +292,178 @@ run_test("Piece equality and hash including style") do
   raise "set should contain 4 unique pieces" unless pieces_set.size == 4
 end
 
-run_test("Piece inherits PIN functionality") do
-  piece = Sashite::Pnn.parse("K'")
+run_test("Piece type and side identification") do
+  test_cases = [
+    ["K", :K, :first, true, false],
+    ["k", :K, :second, false, true],
+    ["+R'", :R, :first, true, false],
+    ["-p'", :P, :second, false, true]
+  ]
 
-  # Test inherited queries
-  raise "should inherit type method" unless piece.type == "K"
-  raise "should inherit side method" unless piece.side == :first
-  raise "should inherit first_player? method" unless piece.first_player?
-  raise "should not be second_player" if piece.second_player?
+  test_cases.each do |pnn_string, expected_type, expected_side, is_first, is_second|
+    piece = Sashite::Pnn.parse(pnn_string)
 
-  # Test inherited comparison methods
-  other_king = Sashite::Pnn.parse("k'")
-  queen = Sashite::Pnn.parse("Q'")
-
-  raise "should recognize same type" unless piece.same_type?(other_king)
-  raise "should recognize different type" if piece.same_type?(queen)
-  raise "should recognize different player" if piece.same_player?(other_king)
-  raise "should recognize same player" unless piece.same_player?(queen)
+    raise "#{pnn_string}: wrong type" unless piece.type == expected_type
+    raise "#{pnn_string}: wrong side" unless piece.side == expected_side
+    raise "#{pnn_string}: wrong first_player?" unless piece.first_player? == is_first
+    raise "#{pnn_string}: wrong second_player?" unless piece.second_player? == is_second
+  end
 end
 
-run_test("Cross-style game scenarios") do
-  # Chess vs Shōgi scenario
-  # First player: Chess (native), Shōgi (foreign)
-  # Second player: Shōgi (native), Chess (foreign)
+run_test("Piece same_type?, same_side?, same_state?, and same_style? methods") do
+  king1 = Sashite::Pnn::Piece.new(:K, :first, :normal, true)
+  king2 = Sashite::Pnn::Piece.new(:K, :second, :enhanced, false)
+  queen = Sashite::Pnn::Piece.new(:Q, :first, :normal, true)
+  foreign_queen = Sashite::Pnn::Piece.new(:Q, :second, :enhanced, false)
 
-  chess_pawn_white = Sashite::Pnn.parse("P")      # Native Chess pawn for first player
-  shogi_pawn_white = Sashite::Pnn.parse("P'")     # Foreign Shōgi pawn for first player
-  shogi_pawn_black = Sashite::Pnn.parse("p")      # Native Shōgi pawn for second player
-  chess_pawn_black = Sashite::Pnn.parse("p'")     # Foreign Chess pawn for second player
+  # same_type? tests
+  raise "K and K should be same type" unless king1.same_type?(king2)
+  raise "K and Q should not be same type" if king1.same_type?(queen)
 
-  # Verify styles
-  raise "White Chess pawn should be native" unless chess_pawn_white.native?
-  raise "White Shōgi pawn should be foreign" unless shogi_pawn_white.foreign?
-  raise "Black Shōgi pawn should be native" unless shogi_pawn_black.native?
-  raise "Black Chess pawn should be foreign" unless chess_pawn_black.foreign?
+  # same_side? tests
+  raise "first player pieces should be same side" unless king1.same_side?(queen)
+  raise "different side pieces should not be same side" if king1.same_side?(king2)
 
-  # Test promotions preserving style
-  promoted_shogi = shogi_pawn_white.enhance
-  raise "Promoted Shōgi pawn should be +P'" unless promoted_shogi.to_s == "+P'"
-  raise "Promoted Shōgi pawn should remain foreign" unless promoted_shogi.foreign?
+  # same_state? tests
+  raise "normal pieces should be same state" unless king1.same_state?(queen)
+  raise "enhanced pieces should be same state" unless king2.same_state?(foreign_queen)
+  raise "different state pieces should not be same state" if king1.same_state?(king2)
+
+  # same_style? tests
+  raise "native pieces should be same style" unless king1.same_style?(queen)
+  raise "foreign pieces should be same style" unless king2.same_style?(foreign_queen)
+  raise "different style pieces should not be same style" if king1.same_style?(king2)
 end
 
-run_test("Style conversions during gameplay") do
-  # Simulate capture and style conversion
-  enemy_piece = Sashite::Pnn.parse("p'")          # Enemy's foreign piece
-  captured = enemy_piece.flip.nativize            # Convert to our side with native style
-  raise "Captured piece should be P" unless captured.to_s == "P"
-  raise "Captured piece should be native" unless captured.native?
-  raise "Captured piece should be first player" unless captured.first_player?
+run_test("Piece state and style methods") do
+  normal_native = Sashite::Pnn::Piece.new(:K, :first, :normal, true)
+  enhanced_foreign = Sashite::Pnn::Piece.new(:K, :first, :enhanced, false)
+  diminished_native = Sashite::Pnn::Piece.new(:K, :first, :diminished, true)
 
-  # Simulate promotion with style preservation
-  foreign_pawn = Sashite::Pnn.parse("p'")         # Foreign pawn
-  promoted = foreign_pawn.enhance                 # Promote while keeping foreign style
-  raise "Promoted foreign pawn should be +p'" unless promoted.to_s == "+p'"
-  raise "Promoted piece should remain foreign" unless promoted.foreign?
+  # Test state identification
+  raise "normal piece should be normal" unless normal_native.normal?
+  raise "normal piece should not be enhanced" if normal_native.enhanced?
+  raise "normal piece should not be diminished" if normal_native.diminished?
+  raise "normal piece state should be :normal" unless normal_native.state == :normal
+
+  raise "enhanced piece should be enhanced" unless enhanced_foreign.enhanced?
+  raise "enhanced piece should not be normal" if enhanced_foreign.normal?
+  raise "enhanced piece state should be :enhanced" unless enhanced_foreign.state == :enhanced
+
+  raise "diminished piece should be diminished" unless diminished_native.diminished?
+  raise "diminished piece should not be normal" if diminished_native.normal?
+  raise "diminished piece state should be :diminished" unless diminished_native.state == :diminished
+
+  # Test style identification
+  raise "native piece should be native" unless normal_native.native?
+  raise "native piece should not be derived" if normal_native.derived?
+  raise "native piece should not be foreign" if normal_native.foreign?
+
+  raise "foreign piece should be derived" unless enhanced_foreign.derived?
+  raise "foreign piece should be foreign" unless enhanced_foreign.foreign?
+  raise "foreign piece should not be native" if enhanced_foreign.native?
 end
 
-# Test error handling
-run_test("Piece error handling") do
+run_test("Piece transformation methods return self when appropriate") do
+  normal_native = Sashite::Pnn::Piece.new(:K, :first, :normal, true)
+  enhanced_foreign = Sashite::Pnn::Piece.new(:K, :first, :enhanced, false)
+  diminished_native = Sashite::Pnn::Piece.new(:K, :first, :diminished, true)
+
+  # Test state methods that should return self
+  raise "unenhance on normal piece should return self" unless normal_native.unenhance.equal?(normal_native)
+  raise "undiminish on normal piece should return self" unless normal_native.undiminish.equal?(normal_native)
+  raise "normalize on normal piece should return self" unless normal_native.normalize.equal?(normal_native)
+  raise "enhance on enhanced piece should return self" unless enhanced_foreign.enhance.equal?(enhanced_foreign)
+  raise "diminish on diminished piece should return self" unless diminished_native.diminish.equal?(diminished_native)
+
+  # Test style methods that should return self
+  raise "underive on native piece should return self" unless normal_native.underive.equal?(normal_native)
+  raise "derive on foreign piece should return self" unless enhanced_foreign.derive.equal?(enhanced_foreign)
+
+  # Test with_* methods that should return self
+  raise "with_type with same type should return self" unless normal_native.with_type(:K).equal?(normal_native)
+  raise "with_side with same side should return self" unless normal_native.with_side(:first).equal?(normal_native)
+  raise "with_state with same state should return self" unless normal_native.with_state(:normal).equal?(normal_native)
+  raise "with_derivation with same derivation should return self" unless normal_native.with_derivation(true).equal?(normal_native)
+end
+
+run_test("Piece transformation chains") do
+  piece = Sashite::Pnn::Piece.new(:K, :first, :normal, true)
+
+  # Test enhance then unenhance
+  enhanced = piece.enhance
+  back_to_normal = enhanced.unenhance
+  raise "enhance then unenhance should equal original" unless back_to_normal == piece
+
+  # Test diminish then undiminish
+  diminished = piece.diminish
+  back_to_normal2 = diminished.undiminish
+  raise "diminish then undiminish should equal original" unless back_to_normal2 == piece
+
+  # Test derive then underive
+  derived = piece.derive
+  back_to_native = derived.underive
+  raise "derive then underive should equal original" unless back_to_native == piece
+
+  # Test complex chain
+  transformed = piece.flip.derive.enhance.with_type(:Q).diminish
+  raise "complex chain should work" unless transformed.to_s == "-q'"
+  raise "original should be unchanged" unless piece.to_s == "K"
+end
+
+run_test("Piece error handling for invalid parameters") do
+  # Invalid types
+  invalid_types = [:invalid, :k, :"1", :AA, "K", 1, nil]
+
+  invalid_types.each do |type|
+    begin
+      Sashite::Pnn::Piece.new(type, :first, :normal, true)
+      raise "Should have raised error for invalid type #{type.inspect}"
+    rescue ArgumentError => e
+      raise "Error message should mention invalid type" unless e.message.include?("Type must be")
+    end
+  end
+
+  # Invalid sides
+  invalid_sides = [:invalid, :player1, :white, "first", 1, nil]
+
+  invalid_sides.each do |side|
+    begin
+      Sashite::Pnn::Piece.new(:K, side, :normal, true)
+      raise "Should have raised error for invalid side #{side.inspect}"
+    rescue ArgumentError => e
+      raise "Error message should mention invalid side" unless e.message.include?("Side must be")
+    end
+  end
+
+  # Invalid states
+  invalid_states = [:invalid, :promoted, :active, "normal", 1, nil]
+
+  invalid_states.each do |state|
+    begin
+      Sashite::Pnn::Piece.new(:K, :first, state, true)
+      raise "Should have raised error for invalid state #{state.inspect}"
+    rescue ArgumentError => e
+      raise "Error message should mention invalid state" unless e.message.include?("State must be")
+    end
+  end
+
+  # Invalid derivations
+  invalid_derivations = [:invalid, "true", "false", 1, 0, nil, "native"]
+
+  invalid_derivations.each do |derivation|
+    begin
+      Sashite::Pnn::Piece.new(:K, :first, :normal, derivation)
+      raise "Should have raised error for invalid derivation #{derivation.inspect}"
+    rescue ArgumentError => e
+      raise "Error message should mention invalid derivation" unless e.message.include?("Derivation must be")
+    end
+  end
+end
+
+run_test("Piece error handling for invalid PNN strings") do
   # Invalid PNN strings
-  invalid_pnns = ["", "KK", "++K", "K''", "123", nil, "'K", "K'K"]
+  invalid_pnns = ["", "KK", "++K", "123", nil, :symbol, "'", "K''", "++K'"]
 
   invalid_pnns.each do |pnn|
     begin
@@ -353,500 +473,376 @@ run_test("Piece error handling") do
       raise "Error message should mention invalid PNN" unless e.message.include?("Invalid PNN")
     end
   end
+end
 
-  # Invalid constructor arguments (inherited from PIN)
-  begin
-    Sashite::Pnn::Piece.new("KK")
-    raise "Should have raised error for invalid letter"
-  rescue ArgumentError => e
-    raise "Error message should mention invalid letter" unless e.message.include?("Letter must be")
+# Test PIN compatibility
+run_test("PIN compatibility - all PIN strings are valid PNN") do
+  pin_strings = [
+    "K", "k", "Q", "q", "R", "r", "B", "b", "N", "n", "P", "p",
+    "A", "a", "Z", "z",
+    "+K", "+k", "+Q", "+q", "+R", "+r", "+B", "+b", "+N", "+n", "+P", "+p",
+    "-K", "-k", "-Q", "-q", "-R", "-r", "-B", "-b", "-N", "-n", "-P", "-p"
+  ]
+
+  pin_strings.each do |pin|
+    # Should be valid as PNN
+    raise "PIN string #{pin.inspect} should be valid PNN" unless Sashite::Pnn.valid?(pin)
+
+    # Should parse correctly as native piece
+    piece = Sashite::Pnn.parse(pin)
+    raise "PIN string should parse as native piece" unless piece.native?
+
+    # Should round-trip correctly
+    raise "PIN string should round-trip" unless piece.to_s == pin
   end
-
-  begin
-    Sashite::Pnn::Piece.new("K", enhanced: true, diminished: true)
-    raise "Should have raised error for conflicting states"
-  rescue ArgumentError => e
-    raise "Error message should mention conflicting states" unless e.message.include?("both enhanced and diminished")
-  end
 end
 
-# Test game-specific examples
-run_test("Western Chess pieces with PNN") do
-  # Standard pieces (native style assumed)
-  king = Sashite::Pnn.parse("K")
-  raise "King should be native" unless king.native?
-  raise "King should be first player" unless king.first_player?
+# Test cross-style game examples
+run_test("Cross-style Chess vs. Shōgi pieces") do
+  # Native pieces (no derivation suffix)
+  white_king = Sashite::Pnn.piece(:K, :first, :normal, true)          # Chess king
+  black_king = Sashite::Pnn.piece(:K, :second, :normal, true)         # Shōgi king
 
-  # Foreign Chess pieces in hybrid game
-  foreign_king = Sashite::Pnn.parse("K'")
-  raise "Foreign king should be foreign" unless foreign_king.foreign?
-  raise "Foreign king PIN should be K'" unless foreign_king.to_s == "K'"
+  # Foreign pieces (with derivation suffix)
+  white_shogi_king = Sashite::Pnn.piece(:K, :first, :normal, false)   # Shōgi king for white
+  black_chess_king = Sashite::Pnn.piece(:K, :second, :normal, false)  # Chess king for black
 
-  # State modifiers with styles
-  castling_king = king.enhance
-  raise "Castling king should be +K" unless castling_king.to_s == "+K"
+  raise "White native king should be 'K'" unless white_king.to_s == "K"
+  raise "Black native king should be 'k'" unless black_king.to_s == "k"
+  raise "White foreign king should be 'K''" unless white_shogi_king.to_s == "K'"
+  raise "Black foreign king should be 'k''" unless black_chess_king.to_s == "k'"
 
-  foreign_castling_king = foreign_king.enhance
-  raise "Foreign castling king should be +K'" unless foreign_castling_king.to_s == "+K'"
+  # Promoted pieces in cross-style context
+  white_promoted_rook = Sashite::Pnn.parse("+R'")  # White shōgi rook promoted to Dragon King
+  black_promoted_pawn = Sashite::Pnn.parse("+p")   # Black shōgi pawn promoted to Tokin
+
+  raise "White promoted rook should be enhanced" unless white_promoted_rook.enhanced?
+  raise "White promoted rook should be foreign" unless white_promoted_rook.derived?
+  raise "Black promoted pawn should be enhanced" unless black_promoted_pawn.enhanced?
+  raise "Black promoted pawn should be native" unless black_promoted_pawn.native?
 end
 
-run_test("Japanese Chess (Shōgi) pieces with PNN") do
-  # Basic pieces
-  rook = Sashite::Pnn.parse("R")
-  foreign_rook = Sashite::Pnn.parse("R'")
+run_test("Style mutation during gameplay simulation") do
+  # Simulate capture with style change (Ōgi rules)
+  chess_queen = Sashite::Pnn.parse("q'")           # Black chess queen (foreign for shōgi player)
+  captured = chess_queen.flip.with_type(:P).underive  # Becomes white native pawn
 
-  # Promoted pieces
-  dragon_king = rook.enhance
-  raise "Dragon King should be +R" unless dragon_king.to_s == "+R"
-  raise "Dragon King should be native" unless dragon_king.native?
+  raise "Original should be black foreign queen" unless chess_queen.to_s == "q'"
+  raise "Captured should be white native pawn" unless captured.to_s == "P"
 
-  foreign_dragon_king = foreign_rook.enhance
-  raise "Foreign Dragon King should be +R'" unless foreign_dragon_king.to_s == "+R'"
-  raise "Foreign Dragon King should be foreign" unless foreign_dragon_king.foreign?
-end
+  # Style derivation changes during gameplay
+  shogi_piece = Sashite::Pnn.parse("r")           # Black shōgi rook (native)
+  foreign_piece = shogi_piece.derive              # Convert to foreign style
 
-run_test("Cross-game piece transformations") do
-  # Test that pieces can be transformed across different styles
-  piece = Sashite::Pnn.parse("K")
-
-  # Chain transformations including style changes
-  transformed = piece.flip.enhance.foreignize.flip.diminish.nativize
-  expected_final = "-K"  # Should end up as diminished first player king with native style
-
-  raise "Chained transformation should work" unless transformed.to_s == expected_final
-  raise "Original piece should be unchanged" unless piece.to_s == "K"
-  raise "Final piece should be native" unless transformed.native?
+  raise "Original should be native" unless shogi_piece.native?
+  raise "Converted should be foreign" unless foreign_piece.derived?
+  raise "Foreign piece should be 'r''" unless foreign_piece.to_s == "r'"
 end
 
 # Test practical usage scenarios
-run_test("Practical usage - mixed style collections") do
+run_test("Practical usage - piece collections with derivation") do
   pieces = [
-    Sashite::Pnn.parse("K"),      # Native white king
-    Sashite::Pnn.parse("Q'"),     # Foreign white queen
-    Sashite::Pnn.parse("+R"),     # Native enhanced white rook
-    Sashite::Pnn.parse("+R'"),    # Foreign enhanced white rook
-    Sashite::Pnn.parse("k"),      # Native black king
-    Sashite::Pnn.parse("k'")      # Foreign black king
+    Sashite::Pnn.piece(:K, :first, :normal, true),    # Native white king
+    Sashite::Pnn.piece(:Q, :first, :normal, false),   # Foreign white queen
+    Sashite::Pnn.piece(:R, :first, :enhanced, true),  # Native white promoted rook
+    Sashite::Pnn.piece(:K, :second, :normal, false),  # Foreign black king
+    Sashite::Pnn.piece(:P, :second, :normal, true)    # Native black pawn
   ]
 
-  # Filter by style
+  # Filter by side
+  first_player_pieces = pieces.select(&:first_player?)
+  raise "Should have 3 first player pieces" unless first_player_pieces.size == 3
+
+  # Group by style derivation
   native_pieces = pieces.select(&:native?)
-  foreign_pieces = pieces.select(&:foreign?)
+  foreign_pieces = pieces.select(&:derived?)
   raise "Should have 3 native pieces" unless native_pieces.size == 3
-  raise "Should have 3 foreign pieces" unless foreign_pieces.size == 3
+  raise "Should have 2 foreign pieces" unless foreign_pieces.size == 2
 
-  # Filter by player and style
-  white_native = pieces.select { |p| p.first_player? && p.native? }
-  raise "Should have 2 white native pieces" unless white_native.size == 2
-
-  # Group by type regardless of style
-  by_type = pieces.group_by(&:type)
-  raise "Should have 3 kings" unless by_type["K"].size == 3  # K, k, k'
-  raise "Should have 1 queen" unless by_type["Q"].size == 1  # Q'
-  raise "Should have 2 rooks" unless by_type["R"].size == 2  # +R, +R'
+  # Find promoted pieces
+  promoted = pieces.select(&:enhanced?)
+  raise "Should have 1 promoted piece" unless promoted.size == 1
+  raise "Promoted piece should be rook" unless promoted.first.type == :R
 end
 
-run_test("Practical usage - style conversion simulation") do
-  # Simulate dropping captured pieces in Shōgi-style
-  captured_enemy = Sashite::Pnn.parse("p'")  # Foreign enemy pawn
+run_test("Practical usage - game state simulation with style") do
+  # Simulate promoting a pawn with style considerations
+  native_pawn = Sashite::Pnn.piece(:P, :first, :normal, true)
+  foreign_pawn = Sashite::Pnn.piece(:P, :first, :normal, false)
 
-  # Convert to our piece with our style
-  our_piece = captured_enemy.flip.nativize
-  raise "Converted piece should be P" unless our_piece.to_s == "P"
-  raise "Converted piece should be our player" unless our_piece.first_player?
-  raise "Converted piece should be native style" unless our_piece.native?
+  raise "Native pawn should be normal initially" unless native_pawn.normal?
+  raise "Foreign pawn should be normal initially" unless foreign_pawn.normal?
 
-  # Place it back as enhanced
-  placed_enhanced = our_piece.enhance
-  raise "Placed enhanced should be +P" unless placed_enhanced.to_s == "+P"
+  # Promote to queen using with_type and enhance, preserving style
+  native_promoted = native_pawn.with_type(:Q).enhance
+  foreign_promoted = foreign_pawn.with_type(:Q).enhance
+
+  raise "Native promoted piece should be queen" unless native_promoted.type == :Q
+  raise "Native promoted piece should be enhanced" unless native_promoted.enhanced?
+  raise "Native promoted piece should remain native" unless native_promoted.native?
+  raise "Native promoted should be '+Q'" unless native_promoted.to_s == "+Q"
+
+  raise "Foreign promoted piece should be queen" unless foreign_promoted.type == :Q
+  raise "Foreign promoted piece should be enhanced" unless foreign_promoted.enhanced?
+  raise "Foreign promoted piece should remain foreign" unless foreign_promoted.derived?
+  raise "Foreign promoted should be '+Q''" unless foreign_promoted.to_s == "+Q'"
+
+  # Simulate capturing and flipping with style preservation
+  captured_native = native_promoted.flip  # Becomes enemy piece, keeps native style
+  captured_foreign = foreign_promoted.flip  # Becomes enemy piece, keeps foreign style
+
+  raise "Captured native should be second player" unless captured_native.second_player?
+  raise "Captured native should still be enhanced" unless captured_native.enhanced?
+  raise "Captured native should still be queen" unless captured_native.type == :Q
+  raise "Captured native should remain native" unless captured_native.native?
+  raise "Captured native should be '+q'" unless captured_native.to_s == "+q"
+
+  raise "Captured foreign should be second player" unless captured_foreign.second_player?
+  raise "Captured foreign should still be enhanced" unless captured_foreign.enhanced?
+  raise "Captured foreign should still be queen" unless captured_foreign.type == :Q
+  raise "Captured foreign should remain foreign" unless captured_foreign.derived?
+  raise "Captured foreign should be '+q''" unless captured_foreign.to_s == "+q'"
 end
 
 # Test edge cases
-run_test("Edge case - all letters with foreign style") do
-  letters = ("A".."Z").to_a + ("a".."z").to_a
+run_test("Edge case - all letters of alphabet with derivation") do
+  letters = ("A".."Z").to_a
 
   letters.each do |letter|
-    # Test with foreign style marker
-    foreign = "#{letter}'"
-    raise "#{foreign} should be valid" unless Sashite::Pnn.valid?(foreign)
+    type_symbol = letter.to_sym
 
-    piece = Sashite::Pnn.parse(foreign)
-    raise "#{foreign} should parse as foreign" unless piece.foreign?
-    raise "#{foreign} should have correct letter" unless piece.letter == letter
+    # Test first player native
+    piece1 = Sashite::Pnn.piece(type_symbol, :first, :normal, true)
+    raise "#{letter} should create valid native piece" unless piece1.type == type_symbol
+    raise "#{letter} should be first player" unless piece1.first_player?
+    raise "#{letter} should be native" unless piece1.native?
+    raise "#{letter} should have correct letter" unless piece1.letter == letter
+    raise "#{letter} should have correct PNN" unless piece1.to_s == letter
 
-    # Test with enhanced state and foreign style
-    enhanced_foreign = "+#{letter}'"
-    raise "#{enhanced_foreign} should be valid" unless Sashite::Pnn.valid?(enhanced_foreign)
+    # Test first player foreign
+    piece2 = Sashite::Pnn.piece(type_symbol, :first, :normal, false)
+    raise "#{letter} should create valid foreign piece" unless piece2.type == type_symbol
+    raise "#{letter} should be first player" unless piece2.first_player?
+    raise "#{letter} should be foreign" unless piece2.derived?
+    raise "#{letter} should have correct letter" unless piece2.letter == letter
+    raise "#{letter} should have correct PNN" unless piece2.to_s == "#{letter}'"
 
-    enhanced_piece = Sashite::Pnn.parse(enhanced_foreign)
-    raise "#{enhanced_foreign} should be enhanced and foreign" unless enhanced_piece.enhanced? && enhanced_piece.foreign?
+    # Test second player native
+    piece3 = Sashite::Pnn.piece(type_symbol, :second, :normal, true)
+    raise "#{letter} should create valid native piece" unless piece3.type == type_symbol
+    raise "#{letter} should be second player" unless piece3.second_player?
+    raise "#{letter} should be native" unless piece3.native?
+    raise "#{letter} should have correct letter" unless piece3.letter == letter.downcase
+    raise "#{letter} should have correct PNN" unless piece3.to_s == letter.downcase
 
-    # Test with diminished state and foreign style
-    diminished_foreign = "-#{letter}'"
-    raise "#{diminished_foreign} should be valid" unless Sashite::Pnn.valid?(diminished_foreign)
+    # Test second player foreign
+    piece4 = Sashite::Pnn.piece(type_symbol, :second, :normal, false)
+    raise "#{letter} should create valid foreign piece" unless piece4.type == type_symbol
+    raise "#{letter} should be second player" unless piece4.second_player?
+    raise "#{letter} should be foreign" unless piece4.derived?
+    raise "#{letter} should have correct letter" unless piece4.letter == letter.downcase
+    raise "#{letter} should have correct PNN" unless piece4.to_s == "#{letter.downcase}'"
 
-    diminished_piece = Sashite::Pnn.parse(diminished_foreign)
-    raise "#{diminished_foreign} should be diminished and foreign" unless diminished_piece.diminished? && diminished_piece.foreign?
+    # Test enhanced native state
+    enhanced = piece1.enhance
+    raise "#{letter} enhanced should work" unless enhanced.enhanced?
+    raise "#{letter} enhanced should have + prefix" unless enhanced.prefix == "+"
+    raise "#{letter} enhanced should preserve style" unless enhanced.native?
+    raise "#{letter} enhanced should have correct PNN" unless enhanced.to_s == "+#{letter}"
+
+    # Test enhanced foreign state
+    enhanced_foreign = piece2.enhance
+    raise "#{letter} enhanced foreign should work" unless enhanced_foreign.enhanced?
+    raise "#{letter} enhanced foreign should have + prefix" unless enhanced_foreign.prefix == "+"
+    raise "#{letter} enhanced foreign should preserve style" unless enhanced_foreign.derived?
+    raise "#{letter} enhanced foreign should have correct PNN" unless enhanced_foreign.to_s == "+#{letter}'"
+
+    # Test diminished state
+    diminished = piece1.diminish
+    raise "#{letter} diminished should work" unless diminished.diminished?
+    raise "#{letter} diminished should have - prefix" unless diminished.prefix == "-"
+    raise "#{letter} diminished should preserve style" unless diminished.native?
+    raise "#{letter} diminished should have correct PNN" unless diminished.to_s == "-#{letter}"
   end
 end
 
-run_test("Edge case - invalid foreign style markers") do
-  invalid_foreign = [
-    "K''", "k''", "++K'", "--K'", "K'K", "K'Q", "'K", "'k",
-    "K 'K", "K' ", " K'", "+'K", "'-K", "K'+"
+run_test("Edge case - unicode and special characters still invalid") do
+  unicode_chars = ["α", "β", "♕", "♔", "🀄", "象", "將"]
+
+  unicode_chars.each do |char|
+    raise "#{char.inspect} should be invalid (not ASCII)" if Sashite::Pnn.valid?(char)
+    raise "#{char.inspect} with + should be invalid" if Sashite::Pnn.valid?("+#{char}")
+    raise "#{char.inspect} with - should be invalid" if Sashite::Pnn.valid?("-#{char}")
+    raise "#{char.inspect} with ' should be invalid" if Sashite::Pnn.valid?("#{char}'")
+    raise "#{char.inspect} with +' should be invalid" if Sashite::Pnn.valid?("+#{char}'")
+  end
+end
+
+run_test("Edge case - whitespace handling still works") do
+  whitespace_cases = [
+    " K", "K ", " +K", "+K ", " -K", "-K ",
+    " K'", "K' ", " +K'", "+K' ", " -K'", "-K' ",
+    "\tK", "K\t", "\n+K", "+K\n", " K ", "\t+K'\t"
   ]
 
-  invalid_foreign.each do |pnn|
-    raise "#{pnn.inspect} should be invalid" if Sashite::Pnn.valid?(pnn)
+  whitespace_cases.each do |pnn|
+    raise "#{pnn.inspect} should be invalid (whitespace)" if Sashite::Pnn.valid?(pnn)
   end
 end
 
-run_test("Edge case - foreign style with all state combinations") do
-  base_letters = ["K", "k", "R", "r"]
-
-  base_letters.each do |letter|
-    # Normal foreign
-    normal_foreign = "#{letter}'"
-    piece = Sashite::Pnn.parse(normal_foreign)
-    raise "#{normal_foreign} should be normal and foreign" unless piece.normal? && piece.foreign?
-
-    # Enhanced foreign
-    enhanced_foreign = "+#{letter}'"
-    piece = Sashite::Pnn.parse(enhanced_foreign)
-    raise "#{enhanced_foreign} should be enhanced and foreign" unless piece.enhanced? && piece.foreign?
-
-    # Diminished foreign
-    diminished_foreign = "-#{letter}'"
-    piece = Sashite::Pnn.parse(diminished_foreign)
-    raise "#{diminished_foreign} should be diminished and foreign" unless piece.diminished? && piece.foreign?
-  end
-end
-
-# Test regex compliance
-run_test("Regex pattern compliance") do
-  # Test against the PNN specification regex: \A[-+]?[A-Za-z]'?\z
-  spec_regex = /\A[-+]?[A-Za-z]'?\z/
-
-  test_strings = [
-    "K", "k", "+K", "+k", "-K", "-k", "K'", "k'", "+K'", "+k'", "-K'", "-k'",
-    "A", "z", "+A", "-z", "A'", "z'", "+A'", "-z'",
-    "", "KK", "++K", "--K", "K+", "K-", "+", "-", "1", "!", "K''", "'K"
+run_test("Edge case - multiple suffixes and invalid combinations") do
+  invalid_combinations = [
+    "K''", "K'''", "+K''", "-K''", "++K'", "--K'", "+-K'", "-+K'",
+    "'K", "K'+", "K'-", "'", "''", "'''", "K'K", "'K'"
   ]
 
-  test_strings.each do |string|
-    spec_match = string.match?(spec_regex)
-    pnn_valid = Sashite::Pnn.valid?(string)
-
-    raise "#{string.inspect}: spec regex and PNN validation disagree" unless spec_match == pnn_valid
+  invalid_combinations.each do |pnn|
+    raise "#{pnn.inspect} should be invalid (invalid combination)" if Sashite::Pnn.valid?(pnn)
   end
 end
 
-# Test inheritance chain
-run_test("Inheritance from PIN::Piece") do
-  piece = Sashite::Pnn.parse("K'")
+# Test validation behavior with edge cases specific to PNN
+run_test("PNN validation edge cases") do
+  # Empty derivation suffix cases
+  edge_cases = [
+    ["'", false],        # Just apostrophe
+    ["", false],         # Empty string
+    ["K''", false],      # Double apostrophe
+    ["'K", false],       # Apostrophe before letter
+    ["K'K", false],      # Letter after apostrophe
+    ["K'+'", false],     # Invalid characters after apostrophe
+    ["+", false],        # Just plus
+    ["-", false],        # Just minus
+    ["+'", false],       # Plus with apostrophe but no letter
+    ["-'", false]        # Minus with apostrophe but no letter
+  ]
 
-  # Should be instance of both classes
-  raise "Should be instance of Pnn::Piece" unless piece.is_a?(Sashite::Pnn::Piece)
-  raise "Should be instance of Pin::Piece" unless piece.is_a?(Sashite::Pin::Piece)
-
-  # Should respond to all PIN methods
-  pin_methods = [:letter, :enhance, :diminish, :flip, :type, :side, :first_player?, :second_player?,
-                 :enhanced?, :diminished?, :normal?, :same_type?, :same_player?, :state]
-
-  pin_methods.each do |method|
-    raise "Should respond to #{method}" unless piece.respond_to?(method)
-  end
-
-  # Should respond to PNN-specific methods
-  pnn_methods = [:native?, :foreign?, :nativize, :foreignize, :toggle_style, :to_pin]
-
-  pnn_methods.each do |method|
-    raise "Should respond to #{method}" unless piece.respond_to?(method)
+  edge_cases.each do |pnn_string, should_be_valid|
+    result = Sashite::Pnn.valid?(pnn_string)
+    if should_be_valid
+      raise "#{pnn_string.inspect} should be valid" unless result
+    else
+      raise "#{pnn_string.inspect} should be invalid" if result
+    end
   end
 end
 
-# Test performance
-run_test("Performance - repeated operations with styles") do
-  # Test performance with many repeated calls including style operations
+# Test performance with PNN extensions
+run_test("Performance - repeated operations with PNN features") do
+  # Test performance with many repeated calls including derivation
   1000.times do
-    piece = Sashite::Pnn.parse("K'")
+    piece = Sashite::Pnn.piece(:K, :first, :normal, true)
     enhanced = piece.enhance
+    derived = piece.derive
     flipped = piece.flip
-    foreignized = piece.foreignize
-    nativized = piece.nativize
+    queen = piece.with_type(:Q)
+    foreign_enhanced = piece.derive.enhance
 
+    raise "Performance test failed" unless Sashite::Pnn.valid?("K")
     raise "Performance test failed" unless Sashite::Pnn.valid?("K'")
     raise "Performance test failed" unless enhanced.enhanced?
+    raise "Performance test failed" unless derived.derived?
     raise "Performance test failed" unless flipped.second_player?
-    raise "Performance test failed" unless foreignized.foreign?
-    raise "Performance test failed" unless nativized.native?
+    raise "Performance test failed" unless queen.type == :Q
+    raise "Performance test failed" unless foreign_enhanced.to_s == "+K'"
   end
 end
 
-run_test("Performance - complex style chains") do
-  # Test performance with complex transformation chains
-  100.times do
-    piece = Sashite::Pnn.parse("K")
-    result = piece.enhance.foreignize.flip.diminish.nativize.toggle_style.normalize
+# Test constants validation
+run_test("PNN class constants are properly defined") do
+  piece_class = Sashite::Pnn::Piece
 
-    raise "Complex chain should work" unless result.is_a?(Sashite::Pnn::Piece)
-    raise "Original should be unchanged" unless piece.to_s == "K"
+  # Test derivation constants
+  raise "NATIVE should be true" unless piece_class::NATIVE == true
+  raise "FOREIGN should be false" unless piece_class::FOREIGN == false
+
+  # Test suffix constants
+  raise "FOREIGN_SUFFIX should be \"'\"" unless piece_class::FOREIGN_SUFFIX == "'"
+  raise "NATIVE_SUFFIX should be \"\"" unless piece_class::NATIVE_SUFFIX == ""
+
+  # Test validation arrays
+  raise "VALID_DERIVATIONS should include both values" unless piece_class::VALID_DERIVATIONS.include?(true) && piece_class::VALID_DERIVATIONS.include?(false)
+end
+
+# Test roundtrip parsing consistency with derivation
+run_test("Roundtrip parsing consistency including derivation") do
+  test_cases = [
+    [:K, :first, :normal, true],
+    [:Q, :second, :enhanced, false],
+    [:P, :first, :diminished, true],
+    [:Z, :second, :normal, false],
+    [:A, :first, :enhanced, false],
+    [:B, :second, :diminished, true]
+  ]
+
+  test_cases.each do |type, side, state, native|
+    # Create piece -> to_s -> parse -> compare
+    original = Sashite::Pnn::Piece.new(type, side, state, native)
+    pnn_string = original.to_s
+    parsed = Sashite::Pnn.parse(pnn_string)
+
+    raise "Roundtrip failed: original != parsed" unless original == parsed
+    raise "Roundtrip failed: different type" unless original.type == parsed.type
+    raise "Roundtrip failed: different side" unless original.side == parsed.side
+    raise "Roundtrip failed: different state" unless original.state == parsed.state
+    raise "Roundtrip failed: different derivation" unless original.native == parsed.native
   end
 end
 
-# Test comprehensive style scenarios
-run_test("Comprehensive style scenario - hybrid game") do
-  # Simulate a Chess vs Shōgi match with piece captures and promotions
+# Test delegation to PIN piece for core functionality
+run_test("PIN delegation works correctly") do
+  pnn_piece = Sashite::Pnn.piece(:K, :first, :enhanced, false)
 
-  # Initial setup: Chess player (first) vs Shōgi player (second)
-  chess_pieces = [
-    Sashite::Pnn.parse("K"),    # White king (Chess native)
-    Sashite::Pnn.parse("Q"),    # White queen (Chess native)
-    Sashite::Pnn.parse("P")     # White pawn (Chess native)
-  ]
+  # Test that PIN-related methods work correctly
+  raise "Type should work via delegation" unless pnn_piece.type == :K
+  raise "Side should work via delegation" unless pnn_piece.side == :first
+  raise "State should work via delegation" unless pnn_piece.state == :enhanced
+  raise "Enhanced? should work via delegation" unless pnn_piece.enhanced?
+  raise "First player? should work via delegation" unless pnn_piece.first_player?
+  raise "Letter should work via delegation" unless pnn_piece.letter == "K"
+  raise "Prefix should work via delegation" unless pnn_piece.prefix == "+"
 
-  shogi_pieces = [
-    Sashite::Pnn.parse("k"),    # Black king (Shōgi native)
-    Sashite::Pnn.parse("g"),    # Black gold (Shōgi native)
-    Sashite::Pnn.parse("p")     # Black pawn (Shōgi native)
-  ]
-
-  # Chess player captures Shōgi pieces (adopts Shōgi style)
-  captured_gold = shogi_pieces[1].flip.foreignize  # G' (foreign gold for Chess player)
-  raise "Captured gold should be G'" unless captured_gold.to_s == "G'"
-  raise "Captured gold should be foreign to Chess player" unless captured_gold.foreign?
-
-  # Shōgi player captures Chess pieces (adopts Chess style)
-  captured_queen = chess_pieces[1].flip.foreignize  # q' (foreign queen for Shōgi player)
-  raise "Captured queen should be q'" unless captured_queen.to_s == "q'"
-  raise "Captured queen should be foreign to Shōgi player" unless captured_queen.foreign?
-
-  # Promotions preserving styles
-  promoted_chess_pawn = chess_pieces[2].enhance    # +P (Chess promotion)
-  promoted_shogi_pawn = shogi_pieces[2].enhance    # +p (Shōgi promotion)
-
-  raise "Chess promoted pawn should be +P" unless promoted_chess_pawn.to_s == "+P"
-  raise "Shōgi promoted pawn should be +p" unless promoted_shogi_pawn.to_s == "+p"
-  raise "Both should remain native to their respective players" unless promoted_chess_pawn.native? && promoted_shogi_pawn.native?
+  # Test that PNN-specific attributes work
+  raise "Native should be PNN-specific" unless pnn_piece.native == false
+  raise "Derived? should work" unless pnn_piece.derived?
+  raise "Suffix should be PNN-specific" unless pnn_piece.suffix == "'"
 end
 
-# Test edge case: empty and whitespace strings
-run_test("Edge case - empty and whitespace PNN strings") do
-  empty_cases = ["", " ", "\t", "\n", "\r", "  ", "\t\n"]
+# Test conversion between PIN and PNN
+run_test("PIN to PNN conversion and compatibility") do
+  # Test that PIN pieces can be represented in PNN as native pieces
+  pin_examples = ["K", "+R", "-p", "q"]
 
-  empty_cases.each do |empty|
-    raise "#{empty.inspect} should be invalid" if Sashite::Pnn.valid?(empty)
+  pin_examples.each do |pin_string|
+    # Parse as PNN (should work since PIN is subset of PNN)
+    pnn_piece = Sashite::Pnn.parse(pin_string)
+
+    # Should be native style
+    raise "PIN piece should parse as native in PNN" unless pnn_piece.native?
+
+    # Should round-trip back to same string
+    raise "PIN->PNN should round-trip" unless pnn_piece.to_s == pin_string
+
+    # Should match PIN validation
+    raise "PNN should validate same as PIN for PIN strings" unless Sashite::Pnn.valid?(pin_string)
+  end
+end
+
+# Test error handling for edge cases
+run_test("Error handling for PNN-specific edge cases") do
+  # Test that apostrophe-only strings fail gracefully
+  apostrophe_cases = ["'", "''", "'''", "'K", "K'K", "+'", "-'"]
+
+  apostrophe_cases.each do |case_string|
+    raise "#{case_string.inspect} should be invalid" if Sashite::Pnn.valid?(case_string)
 
     begin
-      Sashite::Pnn.parse(empty)
-      raise "Should have raised error for #{empty.inspect}"
-    rescue ArgumentError
-      # Expected
+      Sashite::Pnn.parse(case_string)
+      raise "#{case_string.inspect} should raise ArgumentError"
+    rescue ArgumentError => e
+      raise "Error should mention invalid PNN" unless e.message.include?("Invalid PNN")
     end
   end
-end
-
-# Test case sensitivity of foreign marker
-run_test("Foreign marker case sensitivity") do
-  # Only lowercase apostrophe should be valid
-  valid_foreign = ["K'", "k'", "+R'", "-p'"]
-
-  valid_foreign.each do |pnn|
-    raise "#{pnn} should be valid" unless Sashite::Pnn.valid?(pnn)
-    piece = Sashite::Pnn.parse(pnn)
-    raise "#{pnn} should parse as foreign" unless piece.foreign?
-  end
-
-  # Test that other quote characters are invalid
-  invalid_quotes = ["K\"", "K`", "K´", "K^", "K‛"]
-
-  invalid_quotes.each do |pnn|
-    raise "#{pnn} should be invalid (wrong quote)" if Sashite::Pnn.valid?(pnn)
-  end
-end
-
-# Test memory efficiency and object reuse
-run_test("Memory efficiency - object identity for noop operations") do
-  piece = Sashite::Pnn.parse("K")
-
-  # Operations that should return self
-  same_operations = [
-    piece.nativize,      # Already native
-    piece.unenhance,     # Already normal
-    piece.undiminish,    # Already normal
-    piece.normalize      # Already normal
-  ]
-
-  same_operations.each do |result|
-    raise "Noop operation should return same object" unless result.equal?(piece)
-  end
-
-  # Operations that should return new objects
-  different_operations = [
-    piece.foreignize,
-    piece.enhance,
-    piece.diminish,
-    piece.flip,
-    piece.toggle_style
-  ]
-
-  different_operations.each do |result|
-    raise "Mutation operation should return new object" if result.equal?(piece)
-  end
-end
-
-# Test string interpolation and conversion
-run_test("String interpolation and conversion") do
-  piece = Sashite::Pnn.parse("+K'")
-
-  # Test string interpolation
-  interpolated = "Piece: #{piece}"
-  raise "String interpolation should work" unless interpolated == "Piece: +K'"
-
-  # Test explicit string conversion
-  explicit = piece.to_s
-  raise "Explicit to_s should work" unless explicit == "+K'"
-
-  # Test that to_s and interpolation are consistent
-  raise "to_s and interpolation should be consistent" unless "#{piece}" == piece.to_s
-end
-
-# Test thread safety (immutability verification)
-run_test("Thread safety through immutability") do
-  piece = Sashite::Pnn.parse("K")
-
-  # Simulate concurrent access
-  results = []
-  threads = []
-
-  10.times do |i|
-    threads << Thread.new do
-      # Perform various operations
-      enhanced = piece.enhance
-      foreign = piece.foreignize
-      flipped = piece.flip
-
-      results << [enhanced.to_s, foreign.to_s, flipped.to_s]
-    end
-  end
-
-  threads.each(&:join)
-
-  # All results should be identical (proving immutability)
-  expected = ["+K", "K'", "k"]
-  results.each do |result|
-    raise "Thread safety violated" unless result == expected
-  end
-
-  # Original piece should be unchanged
-  raise "Original piece should be unchanged" unless piece.to_s == "K"
-end
-
-# Test collection behavior
-run_test("Collection behavior with mixed styles") do
-  pieces = [
-    Sashite::Pnn.parse("K"),   # Native
-    Sashite::Pnn.parse("K'"),  # Foreign
-    Sashite::Pnn.parse("k"),   # Native
-    Sashite::Pnn.parse("k'")   # Foreign
-  ]
-
-  # Test uniqueness in sets
-  unique_pieces = Set.new(pieces)
-  raise "All pieces should be unique" unless unique_pieces.size == 4
-
-  # Test sorting (should work via to_s)
-  sorted = pieces.sort_by(&:to_s)
-  expected_order = ["K", "K'", "k", "k'"]
-  actual_order = sorted.map(&:to_s)
-  raise "Sorting should work" unless actual_order == expected_order
-
-  # Test grouping by style
-  by_style = pieces.group_by(&:native?)
-  raise "Should have 2 native pieces" unless by_style[true].size == 2
-  raise "Should have 2 foreign pieces" unless by_style[false].size == 2
-end
-
-# Test integration with PIN ecosystem
-run_test("Integration with PIN ecosystem") do
-  # Create PIN piece
-  pin_piece = Sashite::Pin.parse("+R")
-
-  # Create equivalent PNN piece
-  pnn_piece = Sashite::Pnn.parse("+R")
-
-  # Test compatibility
-  raise "PIN and PNN should have same letter" unless pin_piece.letter == pnn_piece.letter
-  raise "PIN and PNN should have same enhanced state" unless pin_piece.enhanced? == pnn_piece.enhanced?
-  raise "PIN and PNN should have same type" unless pin_piece.type == pnn_piece.type
-  raise "PIN and PNN should have same side" unless pin_piece.side == pnn_piece.side
-
-  # Test that PNN to_pin matches PIN to_s
-  raise "PNN to_pin should match PIN to_s" unless pnn_piece.to_pin == pin_piece.to_s
-
-  # Test that both work with same PIN methods
-  pin_flipped = pin_piece.flip
-  pnn_flipped = pnn_piece.flip
-
-  raise "Both should flip to same letter" unless pin_flipped.letter == pnn_flipped.letter
-end
-
-# Test complex real-world scenarios
-run_test("Real-world scenario - complete game simulation") do
-  # Simulate a complex game with captures, promotions, and style changes
-
-  # Initial pieces
-  white_pawn = Sashite::Pnn.parse("P'")     # Foreign (Shōgi) pawn
-  black_pawn = Sashite::Pnn.parse("p'")     # Foreign (Chess) pawn
-
-  # Game progression
-  # 1. Promote pawns
-  white_promoted = white_pawn.enhance       # +P' (promoted foreign pawn)
-  black_promoted = black_pawn.enhance       # +p' (promoted foreign pawn)
-
-  # 2. Capture and convert
-  captured_white = white_promoted.flip.nativize  # +p (captured, converted to native)
-  captured_black = black_promoted.flip.nativize  # +P (captured, converted to native)
-
-  # 3. Verify final states
-  raise "White promoted should be +P'" unless white_promoted.to_s == "+P'"
-  raise "Black promoted should be +p'" unless black_promoted.to_s == "+p'"
-  raise "Captured white should be +p" unless captured_white.to_s == "+p"
-  raise "Captured black should be +P" unless captured_black.to_s == "+P"
-
-  # 4. Verify style consistency
-  raise "Captured pieces should be native" unless captured_white.native? && captured_black.native?
-  raise "Original promoted should remain foreign" unless white_promoted.foreign? && black_promoted.foreign?
-
-  # 5. Verify state preservation through style changes
-  raise "Enhanced state should be preserved" unless captured_white.enhanced? && captured_black.enhanced?
-end
-
-# Test edge case with maximum complexity
-run_test("Maximum complexity piece transformations") do
-  # Start with a complex piece
-  piece = Sashite::Pnn.parse("-k'")  # Diminished foreign black king
-
-  # Apply maximum transformations
-  result = piece
-    .undiminish    # k'
-    .enhance       # +k'
-    .flip          # +K'
-    .nativize      # +K
-    .diminish      # -K (enhanced -> diminished)
-    .foreignize    # -K'
-    .flip          # -k'
-    .normalize     # k'
-    .toggle_style  # k
-
-  expected = "k"
-  raise "Complex transformation should result in #{expected}" unless result.to_s == expected
-  raise "Result should be native" unless result.native?
-  raise "Result should be normal" unless result.normal?
-  raise "Result should be second player" unless result.second_player?
-
-  # Original should be unchanged
-  raise "Original should be unchanged" unless piece.to_s == "-k'"
 end
 
 puts

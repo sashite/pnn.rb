@@ -21,9 +21,6 @@ module Sashite
     # All instances are immutable - state manipulation methods return new instances.
     # This extends the Game Protocol's piece model with Style support through derivation.
     class Piece
-      # PNN validation pattern matching the specification
-      PNN_PATTERN = /\A(?<prefix>[-+])?(?<letter>[a-zA-Z])(?<suffix>')?\z/
-
       # Valid derivation suffixes
       FOREIGN_SUFFIX = "'"
       NATIVE_SUFFIX = ""
@@ -67,14 +64,14 @@ module Sashite
       # @example
       #   Piece.new(:K, :first, :normal, true)
       #   Piece.new(:P, :second, :enhanced, false)
-      def initialize(type, side, state = Sashite::Pin::Piece::NORMAL_STATE, native = NATIVE)
+      def initialize(type, side, state = Pin::Piece::NORMAL_STATE, native = NATIVE)
         # Validate using PIN class methods for type, side, and state
-        Sashite::Pin::Piece.validate_type(type)
-        Sashite::Pin::Piece.validate_side(side)
-        Sashite::Pin::Piece.validate_state(state)
+        Pin::Piece.validate_type(type)
+        Pin::Piece.validate_side(side)
+        Pin::Piece.validate_state(state)
         self.class.validate_derivation(native)
 
-        @piece = Sashite::Pin::Piece.new(type, side, state)
+        @piece = Pin::Piece.new(type, side, state)
         @native = native
 
         freeze
@@ -91,26 +88,23 @@ module Sashite
       #   Pnn::Piece.parse("-p")    # => #<Pnn::Piece type=:P side=:second state=:diminished native=true>
       def self.parse(pnn_string)
         string_value = String(pnn_string)
-        matches = match_pattern(string_value)
 
-        letter = matches[:letter]
-        enhanced = matches[:prefix] == Sashite::Pin::Piece::ENHANCED_PREFIX
-        diminished = matches[:prefix] == Sashite::Pin::Piece::DIMINISHED_PREFIX
-        foreign = matches[:suffix] == FOREIGN_SUFFIX
+        # Check for derivation suffix
+        if string_value.end_with?(FOREIGN_SUFFIX)
+          pin_part = string_value[0...-1] # Remove the apostrophe
+          foreign = true
+        else
+          pin_part = string_value
+          foreign = false
+        end
 
-        # Extract type and side from letter
-        piece_type = letter.upcase.to_sym
-        piece_side = letter == letter.upcase ? Sashite::Pin::Piece::FIRST_PLAYER : Sashite::Pin::Piece::SECOND_PLAYER
-        piece_state = if enhanced
-                        Sashite::Pin::Piece::ENHANCED_STATE
-                      elsif diminished
-                        Sashite::Pin::Piece::DIMINISHED_STATE
-                      else
-                        Sashite::Pin::Piece::NORMAL_STATE
-                      end
+        # Validate and parse the PIN part using existing PIN logic
+        raise ::ArgumentError, format(ERROR_INVALID_PNN, string_value) unless Pin::Piece.valid?(pin_part)
+
+        pin_piece = Pin::Piece.parse(pin_part)
         piece_native = !foreign
 
-        new(piece_type, piece_side, piece_state, piece_native)
+        new(pin_piece.type, pin_piece.side, pin_piece.state, piece_native)
       end
 
       # Check if a string is a valid PNN notation
@@ -126,8 +120,18 @@ module Sashite
       #   Sashite::Pnn::Piece.valid?("++K")  # => false
       def self.valid?(pnn_string)
         return false unless pnn_string.is_a?(::String)
+        return false if pnn_string.empty?
 
-        pnn_string.match?(PNN_PATTERN)
+        # Check for derivation suffix
+        if pnn_string.end_with?(FOREIGN_SUFFIX)
+          pin_part = pnn_string[0...-1] # Remove the apostrophe
+          return false if pin_part.empty? # Can't have just an apostrophe
+        else
+          pin_part = pnn_string
+        end
+
+        # Validate the PIN part using existing PIN validation
+        Pin::Piece.valid?(pin_part)
       end
 
       # Convert the piece to its PNN string representation
@@ -170,7 +174,7 @@ module Sashite
       def enhance
         return self if enhanced?
 
-        self.class.new(type, side, Sashite::Pin::Piece::ENHANCED_STATE, native)
+        self.class.new(type, side, Pin::Piece::ENHANCED_STATE, native)
       end
 
       # Create a new piece without enhanced state
@@ -181,7 +185,7 @@ module Sashite
       def unenhance
         return self unless enhanced?
 
-        self.class.new(type, side, Sashite::Pin::Piece::NORMAL_STATE, native)
+        self.class.new(type, side, Pin::Piece::NORMAL_STATE, native)
       end
 
       # Create a new piece with diminished state
@@ -192,7 +196,7 @@ module Sashite
       def diminish
         return self if diminished?
 
-        self.class.new(type, side, Sashite::Pin::Piece::DIMINISHED_STATE, native)
+        self.class.new(type, side, Pin::Piece::DIMINISHED_STATE, native)
       end
 
       # Create a new piece without diminished state
@@ -203,7 +207,7 @@ module Sashite
       def undiminish
         return self unless diminished?
 
-        self.class.new(type, side, Sashite::Pin::Piece::NORMAL_STATE, native)
+        self.class.new(type, side, Pin::Piece::NORMAL_STATE, native)
       end
 
       # Create a new piece with normal state (no modifiers)
@@ -214,7 +218,7 @@ module Sashite
       def normalize
         return self if normal?
 
-        self.class.new(type, side, Sashite::Pin::Piece::NORMAL_STATE, native)
+        self.class.new(type, side, Pin::Piece::NORMAL_STATE, native)
       end
 
       # Create a new piece with opposite side
@@ -255,7 +259,7 @@ module Sashite
       # @example
       #   piece.with_type(:Q)  # (:K, :first, :normal, true) => (:Q, :first, :normal, true)
       def with_type(new_type)
-        Sashite::Pin::Piece.validate_type(new_type)
+        Pin::Piece.validate_type(new_type)
         return self if type == new_type
 
         self.class.new(new_type, side, state, native)
@@ -268,7 +272,7 @@ module Sashite
       # @example
       #   piece.with_side(:second)  # (:K, :first, :normal, true) => (:K, :second, :normal, true)
       def with_side(new_side)
-        Sashite::Pin::Piece.validate_side(new_side)
+        Pin::Piece.validate_side(new_side)
         return self if side == new_side
 
         self.class.new(type, new_side, state, native)
@@ -281,7 +285,7 @@ module Sashite
       # @example
       #   piece.with_state(:enhanced)  # (:K, :first, :normal, true) => (:K, :first, :enhanced, true)
       def with_state(new_state)
-        Sashite::Pin::Piece.validate_state(new_state)
+        Pin::Piece.validate_state(new_state)
         return self if state == new_state
 
         self.class.new(type, side, new_state, native)
@@ -423,20 +427,6 @@ module Sashite
 
         raise ::ArgumentError, format(ERROR_INVALID_DERIVATION, derivation.inspect)
       end
-
-      # Match PNN pattern against string
-      #
-      # @param string [String] string to match
-      # @return [MatchData] match data
-      # @raise [ArgumentError] if string doesn't match
-      def self.match_pattern(string)
-        matches = PNN_PATTERN.match(string)
-        return matches if matches
-
-        raise ::ArgumentError, format(ERROR_INVALID_PNN, string)
-      end
-
-      private_class_method :match_pattern
 
       private
 

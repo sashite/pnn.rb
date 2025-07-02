@@ -1,8 +1,8 @@
 PATH
   remote: .
   specs:
-    sashite-pnn (1.0.1)
-      sashite-pin (~> 1.1.0)
+    sashite-pnn (2.0.0)
+      sashite-pin (~> 2.0.2)
 
 GEM
   remote: https://rubygems.org/
@@ -73,7 +73,7 @@ GEM
       rubocop (~> 1.72, >= 1.72.1)
       rubocop-ast (>= 1.44.0, < 2.0)
     ruby-progressbar (1.13.0)
-    sashite-pin (1.1.0)
+    sashite-pin (2.0.2)
     simplecov (0.22.0)
       docile (~> 1.1)
       simplecov-html (~> 0.11)

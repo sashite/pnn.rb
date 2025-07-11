@@ -1,16 +1,13 @@
 PATH
   remote: .
   specs:
-    sashite-snn (1.1.1)
+    sashite-snn (3.0.0)
 
 GEM
   remote: https://rubygems.org/
   specs:
     ast (2.4.3)
     date (3.4.1)
-    debug (1.11.0)
-      irb (~> 1.10)
-      reline (>= 0.3.8)
     docile (1.4.1)
     erb (5.0.1)
     io-console (0.8.0)
@@ -35,13 +32,13 @@ GEM
     racc (1.8.1)
     rainbow (3.1.1)
     rake (13.3.0)
-    rdoc (6.14.1)
+    rdoc (6.14.2)
       erb
       psych (>= 4.0.0)
     regexp_parser (2.10.0)
     reline (0.6.1)
       io-console (~> 0.5)
-    rubocop (1.77.0)
+    rubocop (1.78.0)
       json (~> 2.3)
       language_server-protocol (~> 3.17.0.2)
       lint_roller (~> 1.1.0)
@@ -55,6 +52,8 @@ GEM
     rubocop-ast (1.45.1)
       parser (>= 3.3.7.2)
       prism (~> 1.4)
+    rubocop-gitlab-security (0.1.1)
+      rubocop (>= 0.51)
     rubocop-md (2.0.1)
       lint_roller (~> 1.1)
       rubocop (>= 1.72.1)
@@ -88,9 +87,11 @@ PLATFORMS
 
 DEPENDENCIES
   bundler
-  debug
+  irb
   rake
+  rdoc
   rubocop
+  rubocop-gitlab-security
   rubocop-md
   rubocop-performance
   rubocop-rake

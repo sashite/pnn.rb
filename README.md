@@ -1,29 +1,29 @@
-# Snn.rb
+# Pnn.rb
 
-[![Version](https://img.shields.io/github/v/tag/sashite/snn.rb?label=Version&logo=github)](https://github.com/sashite/snn.rb/tags)
-[![Yard documentation](https://img.shields.io/badge/Yard-documentation-blue.svg?logo=github)](https://rubydoc.info/github/sashite/snn.rb/main)
-![Ruby](https://github.com/sashite/snn.rb/actions/workflows/main.yml/badge.svg?branch=main)
-[![License](https://img.shields.io/github/license/sashite/snn.rb?label=License&logo=github)](https://github.com/sashite/snn.rb/raw/main/LICENSE.md)
+[![Version](https://img.shields.io/github/v/tag/sashite/pnn.rb?label=Version&logo=github)](https://github.com/sashite/pnn.rb/tags)
+[![Yard documentation](https://img.shields.io/badge/Yard-documentation-blue.svg?logo=github)](https://rubydoc.info/github/sashite/pnn.rb/main)
+![Ruby](https://github.com/sashite/pnn.rb/actions/workflows/main.yml/badge.svg?branch=main)
+[![License](https://img.shields.io/github/license/sashite/pnn.rb?label=License&logo=github)](https://github.com/sashite/pnn.rb/raw/main/LICENSE.md)
 
-> **SNN** (Style Name Notation) implementation for the Ruby language.
+> **PNN** (Piece Name Notation) implementation for the Ruby language.
 
-## What is SNN?
+## What is PNN?
 
-SNN (Style Name Notation) is a formal, rule-agnostic naming system for identifying **styles** in abstract strategy board games such as chess, shōgi, xiangqi, and their many variants. Each style is represented by a canonical, human-readable ASCII name (e.g., `"Chess"`, `"Shogi"`, `"Xiangqi"`, `"Minishogi"`).
+PNN (Piece Name Notation) is a formal, rule-agnostic naming system for identifying **pieces** in abstract strategy board games such as chess, shÅgi, xiangqi, and their many variants. Each piece is represented by a canonical, human-readable ASCII name with optional state modifiers (e.g., `"KING"`, `"queen"`, `"+ROOK"`, `"-pawn"`).
 
-This gem implements the [SNN Specification v1.0.0](https://sashite.dev/specs/snn/1.0.0/), supporting validation, parsing, and comparison of style names.
+This gem implements the [PNN Specification v1.0.0](https://sashite.dev/specs/pnn/1.0.0/), supporting validation, parsing, and comparison of piece names with integrated state management.
 
 ## Installation
 
 ```ruby
 # In your Gemfile
-gem "sashite-snn"
-````
+gem "sashite-pnn"
+```
 
 Or install manually:
 
 ```sh
-gem install sashite-snn
+gem install sashite-pnn
 ```
 
 ## Usage
@@ -31,51 +31,85 @@ gem install sashite-snn
 ### Basic Operations
 
 ```ruby
-require "sashite/snn"
+require "sashite/pnn"
 
-# Parse SNN strings into style name objects
-name = Sashite::Snn.parse("Shogi")             # => #<Snn::Name value="Shogi">
-name.to_s                                      # => "Shogi"
-name.value                                     # => "Shogi"
+# Parse PNN strings into piece name objects
+name = Sashite::Pnn.parse("KING")             # => #<Pnn::Name value="KING">
+name.to_s                                     # => "KING"
+name.value                                    # => "KING"
 
 # Create from string or symbol
-name = Sashite::Snn.name("Chess")              # => #<Snn::Name value="Chess">
-name = Sashite::Snn::Name.new(:Xiangqi)        # => #<Snn::Name value="Xiangqi">
+name = Sashite::Pnn.name("queen")             # => #<Pnn::Name value="queen">
+name = Sashite::Pnn::Name.new(:ROOK)          # => #<Pnn::Name value="ROOK">
 
-# Validate SNN strings
-Sashite::Snn.valid?("Go9x9")                   # => true
-Sashite::Snn.valid?("chess")                   # => false (must start with uppercase)
-Sashite::Snn.valid?("3DChess")                 # => false (invalid character)
+# Validate PNN strings
+Sashite::Pnn.valid?("BISHOP")                 # => true
+Sashite::Pnn.valid?("King")                   # => false (mixed case not allowed)
+Sashite::Pnn.valid?("+ROOK")                  # => true (enhanced state)
+Sashite::Pnn.valid?("-pawn")                  # => true (diminished state)
+```
+
+### State Modifiers
+
+```ruby
+# Enhanced pieces (+ prefix)
+enhanced = Sashite::Pnn.parse("+QUEEN")
+enhanced.enhanced?                            # => true
+enhanced.normal?                              # => false
+enhanced.base_name                            # => "QUEEN"
+
+# Diminished pieces (- prefix)
+diminished = Sashite::Pnn.parse("-pawn")
+diminished.diminished?                        # => true
+diminished.base_name                          # => "pawn"
+
+# Normal pieces (no prefix)
+normal = Sashite::Pnn.parse("KNIGHT")
+normal.normal?                                # => true
+normal.enhanced?                              # => false
+normal.diminished?                            # => false
+```
+
+### Player Assignment
+
+```ruby
+# First player pieces (uppercase)
+first_player = Sashite::Pnn.parse("KING")
+first_player.first_player?                    # => true
+first_player.second_player?                   # => false
+
+# Second player pieces (lowercase)
+second_player = Sashite::Pnn.parse("king")
+second_player.first_player?                   # => false
+second_player.second_player?                  # => true
 ```
 
 ### Normalization and Comparison
 
 ```ruby
-a = Sashite::Snn.parse("Chess960")
-b = Sashite::Snn.parse("Chess960")
+a = Sashite::Pnn.parse("ROOK")
+b = Sashite::Pnn.parse("ROOK")
 
-a == b                                         # => true
-a.same_base_name?(Sashite::Snn.parse("Chess")) # => true if both resolve to same SIN
-a.to_s # => "Chess960"
-```
-
-### Canonical Representation
-
-```ruby
-# All names are normalized to a canonical format
-name = Sashite::Snn.parse("Minishogi")
-name.value                                    # => "Minishogi"
-name.to_s                                     # => "Minishogi"
+a == b                                        # => true
+a.same_base_name?(Sashite::Pnn.parse("rook")) # => true (same piece, different player)
+a.to_s                                        # => "ROOK"
 ```
 
 ### Collections and Filtering
 
 ```ruby
-names = %w[Chess Shogi Makruk Antichess Minishogi].map { |n| Sashite::Snn.parse(n) }
+pieces = %w[KING queen +ROOK -pawn BISHOP knight].map { |n| Sashite::Pnn.parse(n) }
 
-# Filter by prefix
-names.select { |n| n.value.start_with?("Mini") }.map(&:to_s)
-# => ["Minishogi"]
+# Filter by player
+first_player_pieces = pieces.select(&:first_player?).map(&:to_s)
+# => ["KING", "+ROOK", "BISHOP"]
+
+# Filter by state
+enhanced_pieces = pieces.select(&:enhanced?).map(&:to_s)
+# => ["+ROOK"]
+
+diminished_pieces = pieces.select(&:diminished?).map(&:to_s)
+# => ["-pawn"]
 ```
 
 ## Format Specification
@@ -83,80 +117,102 @@ names.select { |n| n.value.start_with?("Mini") }.map(&:to_s)
 ### Structure
 
 ```
-<uppercase-letter>[<lowercase-letter | digit>]*
+<state-modifier>?<piece-name>
 ```
+
+Where:
+- `<state-modifier>` is optional `+` (enhanced) or `-` (diminished)
+- `<piece-name>` is case-consistent alphabetic characters
 
 ### Grammar (BNF)
 
 ```bnf
-<snn> ::= <uppercase-letter> <tail>
+<pnn> ::= <state-modifier> <name-body>
+       | <name-body>
 
-<tail> ::= ""                                ; Single letter (e.g., "X")
-        | <alphanumeric-char> <tail>         ; Extended name
+<state-modifier> ::= "+" | "-"
 
-<alphanumeric-char> ::= <lowercase-letter> | <digit>
+<name-body> ::= <uppercase-name> | <lowercase-name>
+
+<uppercase-name> ::= <uppercase-letter>+
+<lowercase-name> ::= <lowercase-letter>+
 
 <uppercase-letter> ::= "A" | "B" | "C" | ... | "Z"
 <lowercase-letter> ::= "a" | "b" | "c" | ... | "z"
-<digit> ::= "0" | "1" | "2" | "3" | ... | "9"
 ```
 
 ### Regular Expression
 
 ```ruby
-/\A[A-Z][a-z0-9]*\z/
+/\A[+-]?([A-Z]+|[a-z]+)\z/
 ```
 
 ## Design Principles
 
-* **Human-readable**: Names like `"Shogi"` or `"Chess960"` are intuitive and descriptive.
-* **Canonical**: One valid name per game style within a given context.
+* **Human-readable**: Names like `"KING"` or `"queen"` are intuitive and descriptive.
+* **State-aware**: Integrated state management through `+` and `-` modifiers.
+* **Rule-agnostic**: Independent of specific game mechanics.
+* **Case-consistent**: Visual distinction between players through case.
+* **Canonical**: One valid name per piece state within a given context.
 * **ASCII-only**: Compatible with all systems.
-* **Scalable**: Supports unlimited distinct names for current and future game variants.
 
-## Integration with SIN
+## Integration with PIN
 
-SNN names serve as the formal source for SIN character identifiers. For example:
+PNN names serve as the formal source for PIN character identifiers. For example:
 
-| SNN       | SIN     |
-| --------- | ------- |
-| `Chess`   | `C`/`c` |
-| `Shogi`   | `S`/`s` |
-| `Xiangqi` | `X`/`x` |
-| `Makruk`  | `M`/`m` |
+| PNN       | PIN     | Description |
+| --------- | ------- | ----------- |
+| `KING`    | `K`     | First player king |
+| `king`    | `k`     | Second player king |
+| `+ROOK`   | `+R`    | Enhanced first player rook |
+| `-pawn`   | `-p`    | Diminished second player pawn |
 
-Multiple SNN names may map to the same SIN character (e.g., `"Chess"` and `"Chess960"` both → `C`), but SNN provides unambiguous naming within broader contexts.
+Multiple PNN names may map to the same PIN character (e.g., `"KING"` and `"KHAN"` both â†' `K`), but PNN provides unambiguous naming within broader contexts.
 
 ## Examples
 
 ```ruby
-Sashite::Snn.parse("Chess")       # => #<Snn::Name value="Chess">
-Sashite::Snn.parse("Chess960")    # => #<Snn::Name value="Chess960">
-Sashite::Snn.valid?("Minishogi")  # => true
-Sashite::Snn.valid?("miniShogi")  # => false
+# Traditional pieces
+Sashite::Pnn.parse("KING")        # => #<Pnn::Name value="KING">
+Sashite::Pnn.parse("queen")       # => #<Pnn::Name value="queen">
+
+# State modifiers
+Sashite::Pnn.parse("+ROOK")       # => #<Pnn::Name value="+ROOK">
+Sashite::Pnn.parse("-pawn")       # => #<Pnn::Name value="-pawn">
+
+# Validation
+Sashite::Pnn.valid?("BISHOP")     # => true
+Sashite::Pnn.valid?("Bishop")     # => false (mixed case)
+Sashite::Pnn.valid?("KING1")      # => false (no digits allowed)
 ```
 
 ## API Reference
 
 ### Main Module
 
-* `Sashite::Snn.valid?(str)` – Returns `true` if the string is valid SNN.
-* `Sashite::Snn.parse(str)` – Returns a `Sashite::Snn::Name` object.
-* `Sashite::Snn.name(sym_or_str)` – Alias for constructing a name.
+* `Sashite::Pnn.valid?(str)` â€" Returns `true` if the string is valid PNN.
+* `Sashite::Pnn.parse(str)` â€" Returns a `Sashite::Pnn::Name` object.
+* `Sashite::Pnn.name(sym_or_str)` â€" Alias for constructing a name.
 
-### `Sashite::Snn::Name`
+### `Sashite::Pnn::Name`
 
-* `#value` – Returns the canonical string value.
-* `#to_s` – Returns the string representation.
-* `#==`, `#eql?`, `#hash` – Value-based equality.
-* `#same_base_name?(other)` – Optional helper for SIN mapping equivalence.
+* `#value` â€" Returns the canonical string value.
+* `#to_s` â€" Returns the string representation.
+* `#base_name` â€" Returns the name without state modifier.
+* `#enhanced?` â€" Returns `true` if piece has enhanced state (`+` prefix).
+* `#diminished?` â€" Returns `true` if piece has diminished state (`-` prefix).
+* `#normal?` â€" Returns `true` if piece has normal state (no prefix).
+* `#first_player?` â€" Returns `true` if piece belongs to first player (uppercase).
+* `#second_player?` â€" Returns `true` if piece belongs to second player (lowercase).
+* `#same_base_name?(other)` â€" Returns `true` if both pieces have same base name.
+* `#==`, `#eql?`, `#hash` â€" Value-based equality.
 
 ## Development
 
 ```sh
 # Clone the repository
-git clone https://github.com/sashite/snn.rb.git
-cd snn.rb
+git clone https://github.com/sashite/pnn.rb.git
+cd pnn.rb
 
 # Install dependencies
 bundle install
@@ -184,4 +240,4 @@ Available as open source under the [MIT License](https://opensource.org/licenses
 
 ## About
 
-Maintained by [Sashité](https://sashite.com/) — promoting chess variants and sharing the beauty of board game cultures.
+Maintained by [Sashité](https://sashite.com/) â€" promoting chess variants and sharing the beauty of board game cultures.

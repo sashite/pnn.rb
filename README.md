@@ -190,22 +190,22 @@ Sashite::Pnn.valid?("KING1")      # => false (no digits allowed)
 
 ### Main Module
 
-* `Sashite::Pnn.valid?(str)` â€" Returns `true` if the string is valid PNN.
-* `Sashite::Pnn.parse(str)` â€" Returns a `Sashite::Pnn::Name` object.
-* `Sashite::Pnn.name(sym_or_str)` â€" Alias for constructing a name.
+* `Sashite::Pnn.valid?(str)` — Returns `true` if the string is valid PNN.
+* `Sashite::Pnn.parse(str)` — Returns a `Sashite::Pnn::Name` object.
+* `Sashite::Pnn.name(sym_or_str)` — Alias for constructing a name.
 
 ### `Sashite::Pnn::Name`
 
-* `#value` â€" Returns the canonical string value.
-* `#to_s` â€" Returns the string representation.
-* `#base_name` â€" Returns the name without state modifier.
-* `#enhanced?` â€" Returns `true` if piece has enhanced state (`+` prefix).
-* `#diminished?` â€" Returns `true` if piece has diminished state (`-` prefix).
-* `#normal?` â€" Returns `true` if piece has normal state (no prefix).
-* `#first_player?` â€" Returns `true` if piece belongs to first player (uppercase).
-* `#second_player?` â€" Returns `true` if piece belongs to second player (lowercase).
-* `#same_base_name?(other)` â€" Returns `true` if both pieces have same base name.
-* `#==`, `#eql?`, `#hash` â€" Value-based equality.
+* `#value` — Returns the canonical string value.
+* `#to_s` — Returns the string representation.
+* `#base_name` — Returns the name without state modifier.
+* `#enhanced?` — Returns `true` if piece has enhanced state (`+` prefix).
+* `#diminished?` — Returns `true` if piece has diminished state (`-` prefix).
+* `#normal?` — Returns `true` if piece has normal state (no prefix).
+* `#first_player?` — Returns `true` if piece belongs to first player (uppercase).
+* `#second_player?` — Returns `true` if piece belongs to second player (lowercase).
+* `#same_base_name?(other)` — Returns `true` if both pieces have same base name.
+* `#==`, `#eql?`, `#hash` — Value-based equality.
 
 ## Development
 
@@ -240,4 +240,4 @@ Available as open source under the [MIT License](https://opensource.org/licenses
 
 ## About
 
-Maintained by [Sashité](https://sashite.com/) â€" promoting chess variants and sharing the beauty of board game cultures.
+Maintained by [Sashité](https://sashite.com/) — promoting chess variants and sharing the beauty of board game cultures.

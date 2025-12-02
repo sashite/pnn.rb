@@ -11,9 +11,10 @@ Gem::Specification.new do |spec|
     PNN (Piece Name Notation) provides a rule-agnostic, scalable naming system for identifying
     abstract strategy board game pieces. This gem implements the PNN Specification v1.0.0 with
     a modern Ruby interface featuring immutable piece name objects and functional programming
-    principles. PNN uses canonical ASCII names with optional state modifiers (e.g., "KING", "queen",
-    "+ROOK", "-pawn") to unambiguously refer to game pieces across variants and traditions.
-    Ideal for engines, protocols, and tools that need clear and extensible piece identifiers.
+    principles. PNN uses canonical ASCII names with optional state modifiers and optional terminal
+    markers (e.g., "KING", "queen", "+ROOK", "-pawn", "KING^", "+GENERAL^") to unambiguously
+    refer to game pieces across variants and traditions. Ideal for engines, protocols, and tools
+    that need clear and extensible piece identifiers.
   DESC
 
   spec.homepage               = "https://github.com/sashite/pnn.rb"
